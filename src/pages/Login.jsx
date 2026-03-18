@@ -13,6 +13,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
+    if (!supabase) {
+      toast.error('As variáveis do Supabase (VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY) não foram configuradas no painel da Netlify!');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({

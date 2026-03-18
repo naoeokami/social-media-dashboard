@@ -109,7 +109,10 @@ export function AppProvider({ children }) {
       if (dbPost.time === '') dbPost.time = null;
 
       const { error } = await supabase.from('posts').insert(dbPost);
-      if (error) toast.error("Erro ao salvar post no banco.");
+      if (error) {
+        console.error('Supabase AddPost Error:', error);
+        toast.error(`Erro no Supabase: ${error.message}`);
+      }
     }
     return newPost;
   };
