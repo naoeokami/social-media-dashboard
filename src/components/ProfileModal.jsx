@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HiX } from 'react-icons/hi';
 import { useApp } from '../contexts/AppContext';
+import { supabase } from '../lib/supabase';
 
 export default function ProfileModal({ isOpen, onClose }) {
   const { profile, updateProfile, apiKeys, updateApiKeys } = useApp();
@@ -56,6 +57,12 @@ export default function ProfileModal({ isOpen, onClose }) {
     onClose();
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    onClose();
+    window.location.reload();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -63,12 +70,20 @@ export default function ProfileModal({ isOpen, onClose }) {
       <div className="relative w-full max-w-md bg-dark-800 border border-dark-600/50 rounded-2xl shadow-2xl animate-slide-up overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 bg-dark-800/95 backdrop-blur-xl border-b border-dark-600/50 z-10">
           <h2 className="text-lg font-bold text-white">Configurações de Perfil</h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
-          >
-            <HiX className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleLogout}
+              className="text-xs text-danger font-medium px-2 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 transition-all"
+            >
+              Sair
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-700 transition-all"
+            >
+              <HiX className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex bg-dark-800 border-b border-dark-600/50">

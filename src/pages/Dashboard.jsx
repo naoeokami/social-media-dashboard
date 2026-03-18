@@ -151,7 +151,7 @@ function TodoWidget() {
 }
 
 export default function Dashboard() {
-  const { shortcuts, addShortcut, deleteShortcut } = useApp();
+  const { posts, shortcuts, addShortcut, deleteShortcut } = useApp();
   const [showAddShortcut, setShowAddShortcut] = useState(false);
   const [newShortcut, setNewShortcut] = useState({ name: '', url: '', icon: '🔗', color: '#6366f1' });
   
@@ -244,19 +244,19 @@ export default function Dashboard() {
           <h3 className="font-semibold text-white text-sm mb-4">Resumo da Semana</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold gradient-text">12</p>
+              <p className="text-2xl font-bold gradient-text">{posts.filter(p => p.status === 'agendado').length}</p>
               <p className="text-xs text-dark-400 mt-1">Posts Agendados</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold text-success">8</p>
+              <p className="text-2xl font-bold text-success">{posts.filter(p => p.status === 'publicado').length}</p>
               <p className="text-xs text-dark-400 mt-1">Publicados</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold text-warning">3</p>
+              <p className="text-2xl font-bold text-warning">{posts.filter(p => p.status === 'aprovacao' || p.status === 'producao').length}</p>
               <p className="text-xs text-dark-400 mt-1">Aguardando</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold text-brand-400">96.2K</p>
+              <p className="text-2xl font-bold text-brand-400">N/D</p>
               <p className="text-xs text-dark-400 mt-1">Alcance Total</p>
             </div>
           </div>

@@ -17,6 +17,29 @@ export function AppProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profile, setProfile] = useState({});
   const [apiKeys, setApiKeys] = useState({});
+  
+  // Auth state
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  // Initialize Auth
+  useEffect(() => {
+    if (!hasSupabaseConfig) {
+      setLoadingUser(false);
+      return;
+    }
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoadingUser(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Load Data
   useEffect(() => {
@@ -29,6 +52,13 @@ export function AppProvider({ children }) {
     if (savedKeys) {
       setApiKeys(JSON.parse(savedKeys));
     }
+
+    if (hasSupabaseConfig && loadingUser) return;
+    if (hasSupabaseConfig && !user) {
+      setPosts([]); setTodos([]); setSwipeItems([]); setShortcuts([]); setProducts([]); setSegments([]);
+      return;
+    }
+
     async function loadData() {
       if (!hasSupabaseConfig) {
         import('../data/mockData').then(({ initialTodos, quickShortcuts, funnelSegments }) => {
@@ -45,12 +75,12 @@ export function AppProvider({ children }) {
 
       try {
         const [postsRes, todosRes, swipeRes, shortcutsRes, productsRes, segmentsRes] = await Promise.all([
-          supabase.from('posts').select('*').order('created_at', { ascending: false }),
-          supabase.from('todos').select('*').order('created_at', { ascending: true }),
-          supabase.from('swipe_items').select('*').order('created_at', { ascending: false }),
-          supabase.from('shortcuts').select('*').order('created_at', { ascending: true }),
-          supabase.from('products').select('*').order('created_at', { ascending: true }),
-          supabase.from('segments').select('*').order('created_at', { ascending: true }),
+          supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+          supabase.from('todos').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+          supabase.from('swipe_items').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+          supabase.from('shortcuts').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+          supabase.from('products').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+          supabase.from('segments').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
         ]);
 
         if (postsRes.data) setPosts(postsRes.data);
@@ -65,7 +95,7 @@ export function AppProvider({ children }) {
     }
 
     loadData();
-  }, []);
+  }, [user, loadingUser]);
 
   // Posts CRUD
   const addPost = async (post) => {
@@ -73,7 +103,7 @@ export function AppProvider({ children }) {
     setPosts(prev => [newPost, ...prev]);
 
     if (hasSupabaseConfig) {
-      const dbPost = { ...newPost };
+      const dbPost = { ...newPost, user_id: user?.id };
       if (dbPost.budget === '') dbPost.budget = null;
       if (dbPost.date === '') dbPost.date = null;
       if (dbPost.time === '') dbPost.time = null;
@@ -111,7 +141,7 @@ export function AppProvider({ children }) {
     setTodos(prev => [...prev, newTodo]);
     
     if (hasSupabaseConfig) {
-      await supabase.from('todos').insert(newTodo);
+      await supabase.from('todos').insert({ ...newTodo, user_id: user?.id });
     }
   };
 
@@ -139,7 +169,7 @@ export function AppProvider({ children }) {
     setSwipeItems(prev => [newItem, ...prev]);
     
     if (hasSupabaseConfig) {
-      await supabase.from('swipe_items').insert(newItem);
+      await supabase.from('swipe_items').insert({ ...newItem, user_id: user?.id });
     }
     return newItem;
   };
@@ -156,7 +186,7 @@ export function AppProvider({ children }) {
     const newShortcut = { ...shortcut, id: crypto.randomUUID() };
     setShortcuts(prev => [...prev, newShortcut]);
     if (hasSupabaseConfig) {
-      await supabase.from('shortcuts').insert(newShortcut);
+      await supabase.from('shortcuts').insert({ ...newShortcut, user_id: user?.id });
     }
   };
   
@@ -182,7 +212,7 @@ export function AppProvider({ children }) {
       if (!hasSupabaseConfig) localStorage.setItem('socialhub_products', JSON.stringify(updated));
       return updated;
     });
-    if (hasSupabaseConfig) await supabase.from('products').insert(newProduct);
+    if (hasSupabaseConfig) await supabase.from('products').insert({ ...newProduct, user_id: user?.id });
   };
 
   const updateProduct = async (id, data) => {
@@ -211,7 +241,7 @@ export function AppProvider({ children }) {
       if (!hasSupabaseConfig) localStorage.setItem('socialhub_segments', JSON.stringify(updated));
       return updated;
     });
-    if (hasSupabaseConfig) await supabase.from('segments').insert(newSegment);
+    if (hasSupabaseConfig) await supabase.from('segments').insert({ ...newSegment, user_id: user?.id });
   };
 
   const deleteSegment = async (id) => {
@@ -234,6 +264,7 @@ export function AppProvider({ children }) {
   };
 
   const value = {
+    user, loadingUser,
     posts, addPost, updatePost, deletePost,
     todos, addTodo, toggleTodo, deleteTodo,
     swipeItems, addSwipeItem, deleteSwipeItem,
