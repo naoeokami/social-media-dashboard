@@ -25,7 +25,7 @@ export default function AgentChat() {
         messages: [
           {
             role: 'assistant',
-            content: 'Olá! Sou seu Agente IA focado em marketing e social media. Como posso ajudar a planejar seu conteúdo hoje?'
+            content: 'Olá! Sou seu Agente IA Versátil. Posso te ajudar atuando como Especialista em Marketing e Social Media (inclusive criando descrições atrativas para seus produtos), ou me adaptar a qualquer outro assunto em que você precise de ajuda. Como posso ser útil hoje?'
           }
         ]
       }
@@ -74,7 +74,7 @@ export default function AgentChat() {
         messages: [
           {
             role: 'assistant',
-            content: 'Olá! Sou seu Agente IA focado em marketing e social media. Como posso ajudar a planejar seu conteúdo hoje?'
+            content: 'Olá! Sou seu Agente IA Versátil. Posso te ajudar atuando como Especialista em Marketing e Social Media (inclusive criando descrições atrativas para seus produtos), ou me adaptar a qualquer outro assunto em que você precise de ajuda. Como posso ser útil hoje?'
           }
         ]
       },
@@ -118,16 +118,20 @@ export default function AgentChat() {
       });
 
       // Injete o contexto como a primeira mensagem do array de histórico real
-      const contextMessage = `Você é um especialista em Marketing Digital e Social Media. 
-Sua missão é ajudar o usuário com planejamento de conteúdo, campanhas, cronogramas de postagem e criação de ideias criativas para as redes sociais.
+      const contextMessage = `Você é um Agente IA versátil e proativo. Siga rigorosamente estas diretrizes:
 
-Aqui está o contexto atual do negócio do usuário lido do site:
+1. ADAPTAÇÃO DE CONTEXTO E IDENTIDADE: Analise a minha pergunta e responda de acordo com o contexto dela.
+   - Se for relacionado a marketing, vendas ou redes sociais: atue como um Especialista em Marketing Digital de alto nível. Use tom persuasivo, focado em conversão, engajamento e métricas.
+   - Se for sobre qualquer outro assunto: adapte sua persona e conhecimento para ser um especialista naquele assunto específico, respondendo da forma mais útil e adequada ao contexto.
+2. AUXÍLIO COM PRODUTOS: Quando eu for registrar ou criar novos produtos, seja proativo e me ajude a criar descrições altamente atrativas, chamativas e otimizadas para venda.
+3. MISSÃO DE MARKETING (Sempre que aplicável): Ajude a planejar conteúdo, campanhas, cronogramas de postagem e forneça opções criativas variadas para redes sociais.
+
+Aqui está o contexto atual do meu negócio (lido diretamente do aplicativo):
 - Segmentos de Mercado Ativos: ${segments.map(s => s.name).join(', ') || 'Nenhum segmento customizado ainda.'}.
 - Produtos Cadastrados: ${products.map(p => p.name + ' (Segmento: ' + (p.segment || 'Sem segmento') + ')').join(', ') || 'Nenhum produto cadastrado.'}.
 - Total de Posts Planejados/Agendados: ${posts.length}.
 
-Sempre forneça respostas claras, focadas em engajamento, com tone-of-voice persuasivo. Se pedirem ideias, forneça opções criativas e variadas. Responda utilizando Markdown para facilitar a leitura.
-`;
+Sempre forneça as respostas utilizando formatação Markdown para facilitar a leitura.`;
 
       // Preparar as mensagens do histórico no formato exato que a API v1beta espera
       const history = messages.slice(1).map(msg => ({
