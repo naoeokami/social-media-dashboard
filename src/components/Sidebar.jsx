@@ -11,11 +11,13 @@ import {
   HiOutlineSparkles,
   HiOutlineClipboardList,
   HiOutlineShoppingBag,
+  HiOutlineClock,
 } from 'react-icons/hi';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: HiOutlineHome },
   { path: '/calendario', label: 'Calendário', icon: HiOutlineCalendar },
+  { path: '/cronograma', label: 'Cronograma', icon: HiOutlineClock },
   { path: '/aprovacao', label: 'Aprovação', icon: HiOutlineCheckCircle },
   { path: '/swipe-file', label: 'Swipe File', icon: HiOutlineLightBulb },
   { path: '/relatorios', label: 'Relatórios', icon: HiOutlineChartBar },

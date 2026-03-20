@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Calendar from './pages/Calendar';
+import Schedule from './pages/Schedule';
 import Approval from './pages/Approval';
 import PublicApproval from './pages/PublicApproval';
 import SwipeFile from './pages/SwipeFile';
@@ -36,6 +37,7 @@ export default function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/calendario" element={<Calendar />} />
+            <Route path="/cronograma" element={<Schedule />} />
             <Route path="/aprovacao" element={<Approval />} />
             <Route path="/swipe-file" element={<SwipeFile />} />
             <Route path="/relatorios" element={<Reports />} />

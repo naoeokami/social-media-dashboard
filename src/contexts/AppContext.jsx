@@ -14,6 +14,7 @@ export function AppProvider({ children }) {
   const [shortcuts, setShortcuts] = useState([]);
   const [products, setProducts] = useState([]);
   const [segments, setSegments] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profile, setProfile] = useState({});
   const [apiKeys, setApiKeys] = useState({});
@@ -55,7 +56,7 @@ export function AppProvider({ children }) {
 
     if (hasSupabaseConfig && loadingUser) return;
     if (hasSupabaseConfig && !user) {
-      setPosts([]); setTodos([]); setSwipeItems([]); setShortcuts([]); setProducts([]); setSegments([]);
+      setPosts([]); setTodos([]); setSwipeItems([]); setShortcuts([]); setProducts([]); setSegments([]); setSchedules([]);
       return;
     }
 
@@ -70,6 +71,8 @@ export function AppProvider({ children }) {
         if (localProducts) setProducts(JSON.parse(localProducts));
         const localSegments = localStorage.getItem('socialhub_segments');
         if (localSegments) setSegments(JSON.parse(localSegments));
+        const localSchedules = localStorage.getItem('socialhub_schedules');
+        if (localSchedules) setSchedules(JSON.parse(localSchedules));
         return;
       }
 
@@ -89,6 +92,21 @@ export function AppProvider({ children }) {
         if (shortcutsRes.data) setShortcuts(shortcutsRes.data);
         if (productsRes.data) setProducts(productsRes.data);
         if (segmentsRes.data) setSegments(segmentsRes.data);
+
+        // Load schedules separately to avoid Promise.all failure if table doesn't exist
+        try {
+          const schedulesRes = await supabase.from('schedules').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
+          if (schedulesRes.data) {
+            setSchedules(schedulesRes.data);
+          } else {
+            const localSchedules = localStorage.getItem('socialhub_schedules');
+            if (localSchedules) setSchedules(JSON.parse(localSchedules));
+          }
+        } catch (e) {
+          const localSchedules = localStorage.getItem('socialhub_schedules');
+          if (localSchedules) setSchedules(JSON.parse(localSchedules));
+        }
+
       } catch (error) {
         console.error("Erro ao carregar do Supabase:", error);
       }
@@ -256,6 +274,41 @@ export function AppProvider({ children }) {
     if (hasSupabaseConfig) await supabase.from('segments').delete().eq('id', id);
   };
 
+  // Schedules CRUD
+  const addSchedule = async (schedule) => {
+    const newSchedule = { ...schedule, id: crypto.randomUUID() };
+    setSchedules(prev => {
+      const updated = [...prev, newSchedule];
+      localStorage.setItem('socialhub_schedules', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      await supabase.from('schedules').insert({ ...newSchedule, user_id: user?.id }).catch(() => {});
+    }
+  };
+
+  const updateSchedule = async (id, data) => {
+    setSchedules(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, ...data } : s);
+      localStorage.setItem('socialhub_schedules', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      await supabase.from('schedules').update(data).eq('id', id).catch(() => {});
+    }
+  };
+
+  const deleteSchedule = async (id) => {
+    setSchedules(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      localStorage.setItem('socialhub_schedules', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      await supabase.from('schedules').delete().eq('id', id).catch(() => {});
+    }
+  };
+
   const updateProfile = (data) => {
     setProfile(data);
     localStorage.setItem('socialhub_profile', JSON.stringify(data));
@@ -274,6 +327,7 @@ export function AppProvider({ children }) {
     shortcuts, addShortcut, updateShortcut, deleteShortcut,
     products, addProduct, updateProduct, deleteProduct,
     segments, addSegment, deleteSegment,
+    schedules, addSchedule, updateSchedule, deleteSchedule,
     sidebarOpen, setSidebarOpen,
     profile, updateProfile,
     apiKeys, updateApiKeys
