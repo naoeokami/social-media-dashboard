@@ -15,7 +15,7 @@ export default function MainLayout() {
         } ml-0`}
       >
         <TopBar />
-        <main className="p-6 min-h-[calc(100vh-4rem)]">
+        <main className="p-4 sm:p-6 min-h-[calc(100vh-4rem)] overflow-x-hidden">
           <Outlet />
         </main>
       </div>

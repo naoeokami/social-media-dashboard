@@ -38,7 +38,7 @@ export default function Products() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
           <HiOutlineShoppingBag className="w-8 h-8 text-brand-500" />
@@ -59,7 +59,7 @@ export default function Products() {
               Segmentos
             </h2>
             
-            <form onSubmit={handleAddSegment} className="flex gap-2 mb-6">
+            <form onSubmit={handleAddSegment} className="flex flex-col sm:flex-row gap-2 mb-6">
               <input
                 type="text"
                 value={newSegment}
@@ -69,9 +69,9 @@ export default function Products() {
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 rounded-xl font-medium transition-all"
+                className="px-4 py-2.5 bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 rounded-xl font-medium transition-all flex items-center justify-center"
               >
-                <HiOutlinePlus className="w-5 h-5" />
+                <HiOutlinePlus className="w-5 h-5 flex-shrink-0" />
               </button>
             </form>
 
@@ -80,9 +80,9 @@ export default function Products() {
                 <p className="text-sm text-dark-400 text-center py-4">Nenhum segmento adicionado.</p>
               ) : (
                 segments.map(s => (
-                  <div key={s.id} className="flex items-center justify-between p-3 bg-dark-700/30 border border-dark-600/30 rounded-xl hover:border-dark-500 transition-all">
-                    <span className="text-white text-sm font-medium">{s.name}</span>
-                    <button onClick={() => deleteSegment(s.id)} className="text-dark-400 hover:text-red-400 p-1">
+                  <div key={s.id} className="flex items-center justify-between p-3 bg-dark-700/30 border border-dark-600/30 rounded-xl hover:border-brand-500/30 transition-all group/seg">
+                    <span className="text-white text-sm font-medium leading-tight">{s.name}</span>
+                    <button onClick={() => deleteSegment(s.id)} className="text-dark-400 hover:text-red-400 p-1 opacity-50 group-hover/seg:opacity-100 transition-opacity">
                       <HiOutlineTrash className="w-4 h-4" />
                     </button>
                   </div>
@@ -174,9 +174,9 @@ export default function Products() {
                           <HiOutlineTrash className="w-4 h-4" />
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-2 mb-2">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {(prod.segments || (prod.segment ? prod.segment.split(',').map(s => s.trim()) : [])).map((seg, i) => (
-                          <span key={i} className="inline-block px-2 py-1 bg-brand-500/10 text-brand-400 text-xs rounded-md">
+                          <span key={i} className="inline-flex items-center px-2.5 py-1 bg-brand-500/15 text-brand-300 border border-brand-500/20 text-[10px] sm:text-xs font-medium rounded-lg text-center leading-tight">
                             {seg}
                           </span>
                         ))}

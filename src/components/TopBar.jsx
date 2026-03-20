@@ -8,8 +8,12 @@ const pageTitles = {
   '/': 'Dashboard',
   '/calendario': 'Calendário de Conteúdo',
   '/aprovacao': 'Aprovação de Conteúdo',
+  '/cronograma': 'Cronograma Semanal',
   '/swipe-file': 'Swipe File',
   '/relatorios': 'Relatórios',
+  '/tarefas': 'Guia de Tarefas',
+  '/produtos': 'Produtos e Segmentos',
+  '/agente': 'Agente IA',
 };
 
 export default function TopBar() {
@@ -20,7 +24,7 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="h-16 flex items-center justify-between px-6 border-b border-dark-600/50 bg-dark-800/50 backdrop-blur-xl sticky top-0 z-30">
+      <header className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-dark-600/50 bg-dark-800/50 backdrop-blur-xl sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -29,8 +33,8 @@ export default function TopBar() {
             <HiOutlineMenu className="w-6 h-6" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-white">{title}</h1>
-        <p className="text-xs text-dark-400 mt-0.5">
+            <h1 className="text-lg sm:text-xl font-bold text-white truncate max-w-[150px] sm:max-w-none">{title}</h1>
+        <p className="hidden sm:block text-xs text-dark-400 mt-0.5">
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
         </div>

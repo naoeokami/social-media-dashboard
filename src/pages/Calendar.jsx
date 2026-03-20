@@ -153,7 +153,9 @@ export default function Calendar() {
 
       {/* Calendar Grid */}
       <div className="glass-card overflow-hidden">
-        {/* Weekday Headers */}
+        <div className="overflow-x-auto custom-scrollbar pb-2">
+          <div className="min-w-[700px]">
+            {/* Weekday Headers */}
         <div className="grid grid-cols-7 border-b border-dark-600/50">
           {WEEKDAYS.map(day => (
             <div key={day} className="px-2 py-3 text-center text-xs font-semibold text-dark-400 uppercase tracking-wider">
@@ -217,7 +219,9 @@ export default function Calendar() {
               </div>
             );
           })}
+          </div>
         </div>
+      </div>
       </div>
 
       {/* Post Modal */}

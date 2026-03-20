@@ -19,8 +19,8 @@ export default function Tasks() {
   const completedCount = todos.length - pendingCount;
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             <HiOutlineClipboardList className="w-8 h-8 text-brand-500" />
@@ -42,8 +42,8 @@ export default function Tasks() {
         </div>
       </div>
 
-      <div className="bg-dark-800 border border-dark-600/50 rounded-2xl p-6 shadow-xl">
-        <form onSubmit={handleAddTask} className="flex gap-3 mb-8">
+      <div className="bg-dark-800 border border-dark-600/50 rounded-2xl p-4 sm:p-6 shadow-xl">
+        <form onSubmit={handleAddTask} className="flex flex-col sm:flex-row gap-3 mb-8">
           <input
             type="text"
             value={newTask}
@@ -53,7 +53,7 @@ export default function Tasks() {
           />
           <button
             type="submit"
-            className="px-6 py-3.5 gradient-brand rounded-xl text-white font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all flex items-center gap-2"
+            className="w-full sm:w-auto px-6 py-3.5 gradient-brand rounded-xl text-white font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all flex items-center justify-center gap-2 flex-shrink-0"
           >
             <HiOutlinePlus className="w-5 h-5" />
             <span>Adicionar</span>

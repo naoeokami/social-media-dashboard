@@ -96,11 +96,11 @@ export function AppProvider({ children }) {
         // Load schedules separately to avoid Promise.all failure if table doesn't exist
         try {
           const schedulesRes = await supabase.from('schedules').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
-          if (schedulesRes.data) {
-            setSchedules(schedulesRes.data);
-          } else {
+          if (schedulesRes.error) {
             const localSchedules = localStorage.getItem('socialhub_schedules');
             if (localSchedules) setSchedules(JSON.parse(localSchedules));
+          } else {
+            setSchedules(schedulesRes.data || []);
           }
         } catch (e) {
           const localSchedules = localStorage.getItem('socialhub_schedules');
@@ -283,7 +283,11 @@ export function AppProvider({ children }) {
       return updated;
     });
     if (hasSupabaseConfig) {
-      await supabase.from('schedules').insert({ ...newSchedule, user_id: user?.id }).catch(() => {});
+      const { error } = await supabase.from('schedules').insert({ ...newSchedule, user_id: user?.id });
+      if (error) {
+        console.error("Erro no Supabase Schedules:", error);
+        if (error.code !== '42P01') toast.error("Falha ao salvar no banco. A tarefa ficou salva apenas localmente.");
+      }
     }
   };
 
@@ -294,7 +298,8 @@ export function AppProvider({ children }) {
       return updated;
     });
     if (hasSupabaseConfig) {
-      await supabase.from('schedules').update(data).eq('id', id).catch(() => {});
+      const { error } = await supabase.from('schedules').update(data).eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase update:", error);
     }
   };
 
@@ -305,7 +310,8 @@ export function AppProvider({ children }) {
       return updated;
     });
     if (hasSupabaseConfig) {
-      await supabase.from('schedules').delete().eq('id', id).catch(() => {});
+      const { error } = await supabase.from('schedules').delete().eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase delete:", error);
     }
   };
 
