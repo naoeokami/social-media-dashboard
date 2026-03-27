@@ -66,7 +66,7 @@ export default function TopBar() {
           {profile?.avatarUrl ? (
             <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-white font-semibold text-sm">{profile?.name ? profile.name.charAt(0).toUpperCase() : 'G3'}</span>
+            <span className="text-white font-semibold text-sm">{profile?.name ? profile.name.charAt(0).toUpperCase() : ''}</span>
           )}
         </div>
       </div>
