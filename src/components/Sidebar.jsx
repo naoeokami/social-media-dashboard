@@ -12,6 +12,7 @@ import {
   HiOutlineClipboardList,
   HiOutlineShoppingBag,
   HiOutlineClock,
+  HiOutlineQrcode,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/relatorios', label: 'Relatórios', icon: HiOutlineChartBar },
   { path: '/tarefas', label: 'Guia de Tarefas', icon: HiOutlineClipboardList },
   { path: '/produtos', label: 'Produtos e Segmentos', icon: HiOutlineShoppingBag },
+  { path: '/comandas', label: 'Gerar Comandas', icon: HiOutlineQrcode },
   { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles },
 ];
 

@@ -12,6 +12,7 @@ import Tasks from './pages/Tasks';
 import Products from './pages/Products';
 import AgentChat from './pages/AgentChat';
 import Login from './pages/Login';
+import Comandas from './pages/Comandas';
 import { useApp } from './contexts/AppContext';
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/relatorios" element={<Reports />} />
             <Route path="/tarefas" element={<Tasks />} />
             <Route path="/produtos" element={<Products />} />
+            <Route path="/comandas" element={<Comandas />} />
             <Route path="/agente" element={<AgentChat />} />
           </Route>
         )}
