@@ -8,7 +8,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('profile');
 
   const [form, setForm] = useState({
-    name: 'G3',
+    name: '',
     avatarUrl: '',
     instagramUrl: '',
     facebookUrl: '',
@@ -24,7 +24,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   useEffect(() => {
     if (profile) {
       setForm({
-        name: profile.name || 'G3',
+        name: profile.name || '',
         avatarUrl: profile.avatarUrl || '',
         instagramUrl: profile.instagramUrl || '',
         facebookUrl: profile.facebookUrl || '',
