@@ -30,20 +30,22 @@ export default function Comandas() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [docName, setDocName] = useState('');
+  const [pageWidth, setPageWidth] = useState(6.5);
+  const [pageHeight, setPageHeight] = useState(9.5);
   const canvasRef = useRef(null);
   
-  // Settings for fine-tuning
+  // Settings for fine-tuning in Percentages (%)
   const [settings, setSettings] = useState({
-    qrSize: 320,
-    qrY: 400,
-    textY: 760,
-    fontSize: 54,
+    qrSize: 50,
+    qrY: 42,
+    textY: 80,
+    fontSize: 6,
     textColor: '#000000',
     drawWhiteBox: true,
-    boxWidth: 400,
-    boxHeight: 480,
-    boxY: 360,
-    boxRadius: 30
+    boxWidth: 62,
+    boxHeight: 50,
+    boxY: 38,
+    boxRadius: 5
   });
 
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
@@ -161,6 +163,16 @@ export default function Comandas() {
 
   // Helper to draw a single card
   const drawCard = async (ctx, canvasWidth, canvasHeight, itemData, currentSettings) => {
+    // Calculo de porcentagens para Pixels absolutos usando o tamanho da página
+    const qrPx = (currentSettings.qrSize / 100) * canvasWidth;
+    const qrYPx = (currentSettings.qrY / 100) * canvasHeight;
+    const textYPx = (currentSettings.textY / 100) * canvasHeight;
+    const fontPx = (currentSettings.fontSize / 100) * canvasHeight;
+    const boxWPx = (currentSettings.boxWidth / 100) * canvasWidth;
+    const boxHPx = (currentSettings.boxHeight / 100) * canvasHeight;
+    const boxYPx = (currentSettings.boxY / 100) * canvasHeight;
+    const boxRadiusPx = (currentSettings.boxRadius / 100) * canvasWidth;
+
     // 1. Draw Template
     if (template) {
       const img = new Image();
@@ -178,20 +190,19 @@ export default function Comandas() {
 
     // 2. Draw White Box
     if (currentSettings.drawWhiteBox) {
-      const { boxWidth, boxHeight, boxY, boxRadius } = currentSettings;
-      const boxX = (canvasWidth - boxWidth) / 2;
+      const boxX = (canvasWidth - boxWPx) / 2;
       
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(boxX + boxRadius, boxY);
-      ctx.lineTo(boxX + boxWidth - boxRadius, boxY);
-      ctx.quadraticCurveTo(boxX + boxWidth, boxY, boxX + boxWidth, boxY + boxRadius);
-      ctx.lineTo(boxX + boxWidth, boxY + boxHeight - boxRadius);
-      ctx.quadraticCurveTo(boxX + boxWidth, boxY + boxHeight, boxX + boxWidth - boxRadius, boxY + boxHeight);
-      ctx.lineTo(boxX + boxRadius, boxY + boxHeight);
-      ctx.quadraticCurveTo(boxX, boxY + boxHeight, boxX, boxY + boxHeight - boxRadius);
-      ctx.lineTo(boxX, boxY + boxRadius);
-      ctx.quadraticCurveTo(boxX, boxY, boxX + boxRadius, boxY);
+      ctx.moveTo(boxX + boxRadiusPx, boxYPx);
+      ctx.lineTo(boxX + boxWPx - boxRadiusPx, boxYPx);
+      ctx.quadraticCurveTo(boxX + boxWPx, boxYPx, boxX + boxWPx, boxYPx + boxRadiusPx);
+      ctx.lineTo(boxX + boxWPx, boxYPx + boxHPx - boxRadiusPx);
+      ctx.quadraticCurveTo(boxX + boxWPx, boxYPx + boxHPx, boxX + boxWPx - boxRadiusPx, boxYPx + boxHPx);
+      ctx.lineTo(boxX + boxRadiusPx, boxYPx + boxHPx);
+      ctx.quadraticCurveTo(boxX, boxYPx + boxHPx, boxX, boxYPx + boxHPx - boxRadiusPx);
+      ctx.lineTo(boxX, boxYPx + boxRadiusPx);
+      ctx.quadraticCurveTo(boxX, boxYPx, boxX + boxRadiusPx, boxYPx);
       ctx.closePath();
       ctx.fill();
     }
@@ -200,7 +211,7 @@ export default function Comandas() {
     if (itemData && itemData.link) {
       try {
         const qrDataUrl = await QRCode.toDataURL(itemData.link, {
-          width: currentSettings.qrSize,
+          width: Math.round(qrPx),
           margin: 0,
           errorCorrectionLevel: 'H'
         });
@@ -209,8 +220,8 @@ export default function Comandas() {
         qrImg.src = qrDataUrl;
         await new Promise((resolve) => {
           qrImg.onload = () => {
-            const qrX = (canvasWidth - currentSettings.qrSize) / 2;
-            ctx.drawImage(qrImg, qrX, currentSettings.qrY, currentSettings.qrSize, currentSettings.qrSize);
+            const qrX = (canvasWidth - qrPx) / 2;
+            ctx.drawImage(qrImg, qrX, qrYPx, qrPx, qrPx);
             resolve();
           };
         });
@@ -222,10 +233,10 @@ export default function Comandas() {
     // 4. Draw Text
     if (itemData && itemData.numero) {
       ctx.fillStyle = currentSettings.textColor;
-      ctx.font = `bold ${currentSettings.fontSize}px Inter, sans-serif`;
+      ctx.font = `bold ${fontPx}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText(itemData.numero, canvasWidth / 2, currentSettings.textY);
+      ctx.fillText(itemData.numero, canvasWidth / 2, textYPx);
     }
   };
 
@@ -234,8 +245,8 @@ export default function Comandas() {
       if (!canvasRef.current) return;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
-      canvas.width = 650;
-      canvas.height = 950;
+      canvas.width = pageWidth * 100;
+      canvas.height = pageHeight * 100;
       
       const sampleItem = data.length > 0 ? data[0] : { numero: '001', link: 'https://exemplo.com' };
       
@@ -244,7 +255,7 @@ export default function Comandas() {
     };
     
     updatePreview();
-  }, [template, data, settings]);
+  }, [template, data, settings, pageWidth, pageHeight]);
 
   const handlePreGenerate = () => {
     if (!template) {
@@ -274,12 +285,12 @@ export default function Comandas() {
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'cm',
-        format: [6.5, 9.5]
+        format: [pageWidth, pageHeight]
       });
 
       const hiddenCanvas = document.createElement('canvas');
-      hiddenCanvas.width = 650;
-      hiddenCanvas.height = 950;
+      hiddenCanvas.width = pageWidth * 100;
+      hiddenCanvas.height = pageHeight * 100;
       const ctx = hiddenCanvas.getContext('2d');
 
       for (let i = 0; i < data.length; i++) {
@@ -289,7 +300,7 @@ export default function Comandas() {
         await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
         
         const cardDataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
-        pdf.addImage(cardDataUrl, 'JPEG', 0, 0, 6.5, 9.5);
+        pdf.addImage(cardDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
         
         if (i % 10 === 0) {
           await new Promise(resolve => setTimeout(resolve, 10));
@@ -415,42 +426,69 @@ export default function Comandas() {
               </div>
             </div>
 
+            {/* Dimensions Section */}
+            <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-white mb-4">2. Dimensões da Página</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-dark-200 mb-1.5">Largura (cm)</label>
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={pageWidth} 
+                    onChange={(e) => setPageWidth(Number(e.target.value) || 6.5)}
+                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-dark-200 mb-1.5">Altura (cm)</label>
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={pageHeight} 
+                    onChange={(e) => setPageHeight(Number(e.target.value) || 9.5)}
+                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Settings Section */}
             <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-white mb-4">2. Ajuste de Posições</h2>
+              <h2 className="text-lg font-semibold text-white mb-4">3. Ajuste de Posições</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 
                 <div className="space-y-3">
                   <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                     <span>Tamanho do QR Code</span>
-                    <span className="text-brand-400">{settings.qrSize}px</span>
+                    <span className="text-brand-400">{settings.qrSize}%</span>
                   </label>
-                  <input type="range" min="100" max="600" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500" />
+                  <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500" />
                 </div>
 
                 <div className="space-y-3">
                   <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                     <span>Posição Vertical QR Code (Y)</span>
-                    <span className="text-brand-400">{settings.qrY}px</span>
+                    <span className="text-brand-400">{settings.qrY}%</span>
                   </label>
-                  <input type="range" min="0" max="800" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500" />
+                  <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500" />
                 </div>
 
                 <div className="space-y-3">
                   <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                     <span>Tamanho do Texto</span>
-                    <span className="text-brand-400">{settings.fontSize}px</span>
+                    <span className="text-brand-400">{settings.fontSize}%</span>
                   </label>
-                  <input type="range" min="20" max="150" value={settings.fontSize} onChange={(e) => handleSettingChange('fontSize', e.target.value)} className="w-full accent-brand-500" />
+                  <input type="range" min="1" max="30" value={settings.fontSize} onChange={(e) => handleSettingChange('fontSize', e.target.value)} className="w-full accent-brand-500" />
                 </div>
 
                 <div className="space-y-3">
                   <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                     <span>Posição Vertical Texto (Y)</span>
-                    <span className="text-brand-400">{settings.textY}px</span>
+                    <span className="text-brand-400">{settings.textY}%</span>
                   </label>
-                  <input type="range" min="0" max="900" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500" />
+                  <input type="range" min="0" max="100" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500" />
                 </div>
 
               </div>
@@ -471,30 +509,30 @@ export default function Comandas() {
                     <div className="space-y-3">
                       <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                         <span>Largura da Caixa</span>
-                        <span className="text-brand-400">{settings.boxWidth}px</span>
+                        <span className="text-brand-400">{settings.boxWidth}%</span>
                       </label>
-                      <input type="range" min="200" max="600" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500" />
+                      <input type="range" min="10" max="100" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500" />
                     </div>
                     <div className="space-y-3">
                       <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                         <span>Altura da Caixa</span>
-                        <span className="text-brand-400">{settings.boxHeight}px</span>
+                        <span className="text-brand-400">{settings.boxHeight}%</span>
                       </label>
-                      <input type="range" min="200" max="800" value={settings.boxHeight} onChange={(e) => handleSettingChange('boxHeight', e.target.value)} className="w-full accent-brand-500" />
+                      <input type="range" min="10" max="100" value={settings.boxHeight} onChange={(e) => handleSettingChange('boxHeight', e.target.value)} className="w-full accent-brand-500" />
                     </div>
                     <div className="space-y-3">
                       <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                         <span>Posição Vertical Caixa (Y)</span>
-                        <span className="text-brand-400">{settings.boxY}px</span>
+                        <span className="text-brand-400">{settings.boxY}%</span>
                       </label>
-                      <input type="range" min="0" max="800" value={settings.boxY} onChange={(e) => handleSettingChange('boxY', e.target.value)} className="w-full accent-brand-500" />
+                      <input type="range" min="0" max="100" value={settings.boxY} onChange={(e) => handleSettingChange('boxY', e.target.value)} className="w-full accent-brand-500" />
                     </div>
                     <div className="space-y-3">
                       <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                         <span>Arredondamento Caixa</span>
-                        <span className="text-brand-400">{settings.boxRadius}px</span>
+                        <span className="text-brand-400">{settings.boxRadius}%</span>
                       </label>
-                      <input type="range" min="0" max="100" value={settings.boxRadius} onChange={(e) => handleSettingChange('boxRadius', e.target.value)} className="w-full accent-brand-500" />
+                      <input type="range" min="0" max="50" value={settings.boxRadius} onChange={(e) => handleSettingChange('boxRadius', e.target.value)} className="w-full accent-brand-500" />
                     </div>
                   </div>
                 )}
@@ -517,7 +555,7 @@ export default function Comandas() {
                 ) : (
                   <>
                     <HiOutlineDownload className="w-5 h-5" />
-                    Gerar PDF (6,5 x 9,5 cm)
+                    Gerar PDF ({pageWidth} x {pageHeight} cm)
                   </>
                 )}
               </button>
@@ -543,7 +581,7 @@ export default function Comandas() {
                     <div className="absolute inset-0 border-2 border-brand-500/50 rounded pointer-events-none" />
                   </div>
                 ) : (
-                  <div className="aspect-[6.5/9.5] w-full max-w-[280px] border-2 border-dashed border-dark-600 rounded flex flex-col items-center justify-center text-dark-400 p-6 text-center">
+                  <div style={{ aspectRatio: `${pageWidth}/${pageHeight}` }} className="w-full max-w-[280px] border-2 border-dashed border-dark-600 rounded flex flex-col items-center justify-center text-dark-400 p-6 text-center">
                     <HiOutlinePhotograph className="w-8 h-8 mb-2 opacity-50" />
                     <span className="text-sm">Faça o upload da imagem e planilha para ver o preview</span>
                   </div>
@@ -551,7 +589,7 @@ export default function Comandas() {
               </div>
               <div className="mt-4 text-xs text-dark-400 text-center space-y-1">
                 <p>Preview da primeira comanda</p>
-                <p className="opacity-70">Dimensões finais: 6,5cm x 9,5cm</p>
+                <p className="opacity-70">Dimensões finais: {pageWidth}cm x {pageHeight}cm</p>
               </div>
             </div>
           </div>
