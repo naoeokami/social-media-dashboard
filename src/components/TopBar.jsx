@@ -14,6 +14,7 @@ const pageTitles = {
   '/tarefas': 'Guia de Tarefas',
   '/produtos': 'Produtos e Segmentos',
   '/agente': 'Agente IA',
+  '/comandas': 'Gerar Comandas',
 };
 
 export default function TopBar() {
