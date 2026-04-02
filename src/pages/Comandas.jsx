@@ -37,12 +37,15 @@ export default function Comandas() {
   // Settings for fine-tuning in Percentages (%)
   const [settings, setSettings] = useState({
     qrSize: 50,
+    qrX: 50,
     qrY: 42,
+    textX: 50,
     textY: 80,
     fontSize: 6,
     textColor: '#000000',
     drawWhiteBox: true,
     boxWidth: 62,
+    boxX: 50,
     boxHeight: 50,
     boxY: 38,
     boxRadius: 5
@@ -109,7 +112,17 @@ export default function Comandas() {
 
     const reader = new FileReader();
     reader.onload = (evt) => {
-      setTemplate(evt.target.result);
+      const dataUrl = evt.target.result;
+      setTemplate(dataUrl);
+      
+      // Auto-adjust dimensions based on image aspect ratio
+      const img = new Image();
+      img.onload = () => {
+        const ratio = img.height / img.width;
+        // Keep current width but adjust height to match aspect ratio
+        setPageHeight(Number((pageWidth * ratio).toFixed(2)));
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -170,7 +183,8 @@ export default function Comandas() {
     const fontPx = (currentSettings.fontSize / 100) * canvasHeight;
     const boxWPx = (currentSettings.boxWidth / 100) * canvasWidth;
     const boxHPx = (currentSettings.boxHeight / 100) * canvasHeight;
-    const boxYPx = (currentSettings.boxY / 100) * canvasHeight;
+    const boxXPx = (currentSettings.boxX / 100) * canvasWidth - (boxWPx / 2);
+    const boxYPx = (currentSettings.boxY / 100) * canvasHeight - (boxHPx / 2);
     const boxRadiusPx = (currentSettings.boxRadius / 100) * canvasWidth;
 
     // 1. Draw Template
@@ -190,19 +204,17 @@ export default function Comandas() {
 
     // 2. Draw White Box
     if (currentSettings.drawWhiteBox) {
-      const boxX = (canvasWidth - boxWPx) / 2;
-      
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(boxX + boxRadiusPx, boxYPx);
-      ctx.lineTo(boxX + boxWPx - boxRadiusPx, boxYPx);
-      ctx.quadraticCurveTo(boxX + boxWPx, boxYPx, boxX + boxWPx, boxYPx + boxRadiusPx);
-      ctx.lineTo(boxX + boxWPx, boxYPx + boxHPx - boxRadiusPx);
-      ctx.quadraticCurveTo(boxX + boxWPx, boxYPx + boxHPx, boxX + boxWPx - boxRadiusPx, boxYPx + boxHPx);
-      ctx.lineTo(boxX + boxRadiusPx, boxYPx + boxHPx);
-      ctx.quadraticCurveTo(boxX, boxYPx + boxHPx, boxX, boxYPx + boxHPx - boxRadiusPx);
-      ctx.lineTo(boxX, boxYPx + boxRadiusPx);
-      ctx.quadraticCurveTo(boxX, boxYPx, boxX + boxRadiusPx, boxYPx);
+      ctx.moveTo(boxXPx + boxRadiusPx, boxYPx);
+      ctx.lineTo(boxXPx + boxWPx - boxRadiusPx, boxYPx);
+      ctx.quadraticCurveTo(boxXPx + boxWPx, boxYPx, boxXPx + boxWPx, boxYPx + boxRadiusPx);
+      ctx.lineTo(boxXPx + boxWPx, boxYPx + boxHPx - boxRadiusPx);
+      ctx.quadraticCurveTo(boxXPx + boxWPx, boxYPx + boxHPx, boxXPx + boxWPx - boxRadiusPx, boxYPx + boxHPx);
+      ctx.lineTo(boxXPx + boxRadiusPx, boxYPx + boxHPx);
+      ctx.quadraticCurveTo(boxXPx, boxYPx + boxHPx, boxXPx, boxYPx + boxHPx - boxRadiusPx);
+      ctx.lineTo(boxXPx, boxYPx + boxRadiusPx);
+      ctx.quadraticCurveTo(boxXPx, boxYPx, boxXPx + boxRadiusPx, boxYPx);
       ctx.closePath();
       ctx.fill();
     }
@@ -220,8 +232,8 @@ export default function Comandas() {
         qrImg.src = qrDataUrl;
         await new Promise((resolve) => {
           qrImg.onload = () => {
-            const qrX = (canvasWidth - qrPx) / 2;
-            ctx.drawImage(qrImg, qrX, qrYPx, qrPx, qrPx);
+            const qrXPx = (currentSettings.qrX / 100) * canvasWidth - (qrPx / 2);
+            ctx.drawImage(qrImg, qrXPx, qrYPx, qrPx, qrPx);
             resolve();
           };
         });
@@ -236,7 +248,8 @@ export default function Comandas() {
       ctx.font = `bold ${fontPx}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText(itemData.numero, canvasWidth / 2, textYPx);
+      const textXPx = (currentSettings.textX / 100) * canvasWidth;
+      ctx.fillText(itemData.numero, textXPx, textYPx);
     }
   };
 
@@ -282,8 +295,9 @@ export default function Comandas() {
     const loadingToast = toast.loading('Gerando PDF aguarde...');
 
     try {
+      const orientation = pageWidth > pageHeight ? 'landscape' : 'portrait';
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation,
         unit: 'cm',
         format: [pageWidth, pageHeight]
       });
@@ -294,7 +308,7 @@ export default function Comandas() {
       const ctx = hiddenCanvas.getContext('2d');
 
       for (let i = 0; i < data.length; i++) {
-        if (i > 0) pdf.addPage();
+        if (i > 0) pdf.addPage([pageWidth, pageHeight], orientation);
         ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
         
         await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
@@ -477,6 +491,22 @@ export default function Comandas() {
 
                 <div className="space-y-3">
                   <label className="flex items-center justify-between text-sm font-medium text-dark-200">
+                    <span>Posição Horizontal QR Code (X)</span>
+                    <span className="text-brand-400">{settings.qrX}%</span>
+                  </label>
+                  <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500" />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
+                    <span>Posição Horizontal Texto (X)</span>
+                    <span className="text-brand-400">{settings.textX}%</span>
+                  </label>
+                  <input type="range" min="0" max="100" value={settings.textX} onChange={(e) => handleSettingChange('textX', e.target.value)} className="w-full accent-brand-500" />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
                     <span>Tamanho do Texto</span>
                     <span className="text-brand-400">{settings.fontSize}%</span>
                   </label>
@@ -512,6 +542,13 @@ export default function Comandas() {
                         <span className="text-brand-400">{settings.boxWidth}%</span>
                       </label>
                       <input type="range" min="10" max="100" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500" />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-between text-sm font-medium text-dark-200">
+                        <span>Posição Horizontal Caixa (X)</span>
+                        <span className="text-brand-400">{settings.boxX}%</span>
+                      </label>
+                      <input type="range" min="0" max="100" value={settings.boxX} onChange={(e) => handleSettingChange('boxX', e.target.value)} className="w-full accent-brand-500" />
                     </div>
                     <div className="space-y-3">
                       <label className="flex items-center justify-between text-sm font-medium text-dark-200">
