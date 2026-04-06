@@ -11,6 +11,7 @@ import {
 } from 'react-icons/hi';
 import { FaInstagram, FaFacebook, FaLinkedin } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import ImageCarousel from '../components/ImageCarousel';
 
 const platformIcons = {
   Instagram: FaInstagram,
@@ -74,21 +75,27 @@ export default function Approval() {
         {pendingPosts.map(post => (
           <div key={post.id} className="glass-card overflow-hidden animate-slide-up">
             {/* Preview Header */}
-            <div className="h-40 bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center border-b border-dark-600/30">
-              <div className="text-center">
-                <HiOutlineDocumentText className="w-12 h-12 text-brand-400 mx-auto mb-2" />
-                <span className="text-xs text-dark-400 font-medium">{post.contentType || 'Post'}</span>
+            {(post.fileUrls?.length > 0) || post.fileUrl ? (
+               <div className="h-64 w-full bg-dark-900 border-b border-dark-600/30 flex items-center justify-center p-0 relative">
+                 <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
+               </div>
+            ) : (
+              <div className="h-40 bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center border-b border-dark-600/30">
+                <div className="text-center">
+                  <HiOutlineDocumentText className="w-12 h-12 text-brand-400 mx-auto mb-2" />
+                  <span className="text-xs text-dark-400 font-medium">{post.contentType || 'Post'}</span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Content */}
             <div className="p-5 space-y-4">
               <h3 className="font-bold text-white text-base">{post.title}</h3>
 
               {post.caption && (
-                <p className="text-sm text-dark-300 line-clamp-3 leading-relaxed">
+                <div className="text-sm text-dark-300 line-clamp-3 leading-relaxed whitespace-pre-wrap">
                   {post.caption}
-                </p>
+                </div>
               )}
 
               {/* Platforms */}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { fetchAllMetrics } from '../services/apiService';
-import { mockMetrics } from '../data/mockData';
+// import { mockMetrics } from '../data/mockData';
 import {
   HiOutlineUsers,
   HiOutlineEye,
@@ -158,12 +158,15 @@ export default function Dashboard() {
   const [metricsData, setMetricsData] = useState([]);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
 
+  /*
+  // Em desenvolvimento
   useEffect(() => {
     fetchAllMetrics().then(data => {
       setMetricsData(Object.values(data));
       setLoadingMetrics(false);
     });
   }, []);
+  */
 
   const handleAddShortcut = (e) => {
     e.preventDefault();
@@ -177,7 +180,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Metrics Cards */}
+      {/* Metrics Cards 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {loadingMetrics ? (
           <div className="md:col-span-3 py-6 text-center text-dark-300 text-sm">Carregando métricas reais da API...</div>
@@ -187,6 +190,7 @@ export default function Dashboard() {
           ))
         )}
       </div>
+      */}
 
       {/* Quick Shortcuts */}
       <div className="glass-card p-5">

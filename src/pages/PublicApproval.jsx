@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { HiOutlineCheck, HiOutlineRefresh, HiOutlineDocumentText, HiOutlineCalendar, HiOutlineLink, HiOutlineX } from 'react-icons/hi';
 import { FaInstagram, FaFacebook, FaLinkedin } from 'react-icons/fa';
+import ImageCarousel from '../components/ImageCarousel';
 
 const platformIcons = {
   Instagram: FaInstagram,
@@ -29,12 +30,22 @@ export default function PublicApproval() {
 
   useEffect(() => {
     async function loadPost() {
+      let fetchedData = null;
       if (hasSupabaseConfig) {
         const { data } = await supabase.from('posts').select('*').eq('id', id).single();
-        if (data) setPost(data);
+        fetchedData = data;
       } else {
-        const data = getItemById('posts', id);
-        if (data) setPost(data);
+        fetchedData = getItemById('posts', id);
+      }
+
+      if (fetchedData) {
+         if (fetchedData.fileUrl && fetchedData.fileUrl.startsWith('[')) {
+            try { fetchedData.fileUrls = JSON.parse(fetchedData.fileUrl); } catch(e) {}
+         }
+         if (!fetchedData.fileUrls && fetchedData.fileUrl) {
+            fetchedData.fileUrls = [fetchedData.fileUrl];
+         }
+         setPost(fetchedData);
       }
       setLoading(false);
     }
@@ -99,13 +110,9 @@ export default function PublicApproval() {
         </div>
 
         <div className="glass-card overflow-hidden animate-slide-up bg-dark-800">
-          {post.fileUrl ? (
-            <div className="h-64 sm:h-80 w-full bg-dark-900 border-b border-dark-600/50 flex items-center justify-center p-2">
-              <img 
-                src={post.fileUrl} 
-                alt={post.title} 
-                className="max-w-full max-h-full object-contain rounded-lg"
-              />
+          {(post.fileUrls?.length > 0) || post.fileUrl ? (
+            <div className="h-64 sm:h-96 w-full bg-dark-900 border-b border-dark-600/50 flex items-center justify-center p-0 relative">
+              <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
             </div>
           ) : (
             <div className="h-48 bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center border-b border-dark-600/30">
@@ -121,9 +128,10 @@ export default function PublicApproval() {
               <h3 className="font-bold text-white text-xl mb-3">{post.title}</h3>
               {post.caption && (
                 <div 
-                  className="text-sm text-dark-200 leading-relaxed bg-dark-900 p-4 rounded-xl border border-dark-600/30"
-                  dangerouslySetInnerHTML={{ __html: post.caption }} 
-                />
+                  className="text-sm text-dark-200 leading-relaxed bg-dark-900 p-4 rounded-xl border border-dark-600/30 whitespace-pre-wrap"
+                >
+                  {post.caption}
+                </div>
               )}
             </div>
 

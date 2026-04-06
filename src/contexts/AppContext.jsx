@@ -86,7 +86,17 @@ export function AppProvider({ children }) {
           supabase.from('segments').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
         ]);
 
-        if (postsRes.data) setPosts(postsRes.data);
+        if (postsRes.data) {
+           const parsedPosts = postsRes.data.map(p => {
+             if (p.fileUrl && p.fileUrl.startsWith('[')) {
+                try { p.fileUrls = JSON.parse(p.fileUrl); } catch(e) { p.fileUrls = [p.fileUrl]; }
+             } else if (p.fileUrl) {
+                p.fileUrls = [p.fileUrl];
+             }
+             return p;
+           });
+           setPosts(parsedPosts);
+        }
         if (todosRes.data) setTodos(todosRes.data);
         if (swipeRes.data) setSwipeItems(swipeRes.data);
         if (shortcutsRes.data) setShortcuts(shortcutsRes.data);
@@ -113,6 +123,33 @@ export function AppProvider({ children }) {
     }
 
     loadData();
+
+    // Subscribe to realtime updates
+    let postsChannel;
+    if (hasSupabaseConfig && user) {
+      postsChannel = supabase.channel('realtime:posts')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, payload => {
+           setPosts(prev => {
+              const newPost = payload.new;
+              // Check if post exists locally
+              if (!prev.some(p => p.id === newPost.id)) return prev;
+              
+              // Handle unmigrated JSON array logic
+              if (newPost.fileUrl && newPost.fileUrl.startsWith('[')) {
+                 try { newPost.fileUrls = JSON.parse(newPost.fileUrl); } catch(e) { newPost.fileUrls = [newPost.fileUrl]; }
+              } else if (newPost.fileUrl) {
+                 newPost.fileUrls = [newPost.fileUrl];
+              }
+              
+              return prev.map(p => p.id === newPost.id ? newPost : p);
+           });
+        })
+        .subscribe();
+    }
+
+    return () => {
+      if (postsChannel) supabase.removeChannel(postsChannel);
+    };
   }, [user, loadingUser]);
 
   // Posts CRUD
@@ -125,6 +162,16 @@ export function AppProvider({ children }) {
       if (dbPost.budget === '') dbPost.budget = null;
       if (dbPost.date === '') dbPost.date = null;
       if (dbPost.time === '') dbPost.time = null;
+
+      // Handle unmigrated database: serialize fileUrls into existing fileUrl column
+      if (dbPost.fileUrls !== undefined) {
+         if (dbPost.fileUrls.length > 0) {
+            dbPost.fileUrl = JSON.stringify(dbPost.fileUrls);
+         } else {
+            dbPost.fileUrl = '';
+         }
+         delete dbPost.fileUrls;
+      }
 
       const { error } = await supabase.from('posts').insert(dbPost);
       if (error) {
@@ -142,6 +189,16 @@ export function AppProvider({ children }) {
       if (dbPost.budget === '') dbPost.budget = null;
       if (dbPost.date === '') dbPost.date = null;
       if (dbPost.time === '') dbPost.time = null;
+
+      // Handle unmigrated database: serialize fileUrls into existing fileUrl column
+      if (dbPost.fileUrls !== undefined) {
+         if (dbPost.fileUrls.length > 0) {
+            dbPost.fileUrl = JSON.stringify(dbPost.fileUrls);
+         } else {
+            dbPost.fileUrl = '';
+         }
+         delete dbPost.fileUrls;
+      }
 
       const { error } = await supabase.from('posts').update(dbPost).eq('id', id);
       if (error) toast.error("Erro ao atualizar post.");

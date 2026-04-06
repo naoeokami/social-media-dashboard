@@ -227,9 +227,10 @@ export default function Calendar() {
       {/* Post Modal */}
       <PostModal
         isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingPost(null); }}
+        onClose={() => { setModalOpen(false); setEditingPost(null); setSelectedDate(null); }}
         onSave={handleSavePost}
         editingPost={editingPost}
+        initialDate={selectedDate}
       />
     </div>
   );

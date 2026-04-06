@@ -17,12 +17,13 @@ const emptyPost = {
   productId: '',
   tool: 'Canva',
   status: 'ideia',
-  fileUrl: '',
+  fileUrls: [], // Substitui fileUrl para múltiplos
+  fileUrl: '', // Mantido por compatibilidade
   hasPaidTraffic: false,
   budget: '',
 };
 
-export default function PostModal({ isOpen, onClose, onSave, editingPost }) {
+export default function PostModal({ isOpen, onClose, onSave, editingPost, initialDate }) {
   const { segments, products } = useApp();
   const [form, setForm] = useState(emptyPost);
 
@@ -30,11 +31,14 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost }) {
 
   useEffect(() => {
     if (editingPost) {
-      setForm(editingPost);
+      setForm({
+         ...editingPost,
+         fileUrls: editingPost.fileUrls || (editingPost.fileUrl ? [editingPost.fileUrl] : []),
+      });
     } else {
-      setForm(emptyPost);
+      setForm({ ...emptyPost, date: initialDate || '' });
     }
-  }, [editingPost, isOpen]);
+  }, [editingPost, isOpen, initialDate]);
 
   if (!isOpen) return null;
 
@@ -52,48 +56,84 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost }) {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const target = e.target;
+    const files = Array.from(target.files);
+    if (!files.length) return;
 
     if (!hasSupabaseConfig) {
       toast.error('Supabase não configurado! Configure as chaves no .env.local para fazer upload.');
       return;
     }
+    
+    if ((form.fileUrls?.length || 0) + files.length > 10) {
+      toast.error('Máximo de 10 imagens permitidas!');
+      return;
+    }
 
     try {
       setIsUploading(true);
-      const toastId = toast.loading('Comprimindo imagem...');
+      const toastId = toast.loading(`Fazendo upload de ${files.length} imagem(ns)...`);
 
+      const newUrls = [];
       const options = {
         maxSizeMB: 1, // Max 1MB
         maxWidthOrHeight: 1920,
         useWebWorker: true
       };
-      const compressedFile = await imageCompression(file, options);
 
-      toast.loading('Fazendo upload...', { id: toastId });
-      
-      const fileName = `${crypto.randomUUID()}-${compressedFile.name}`;
-      const { data, error } = await supabase.storage
-        .from('posts_images')
-        .upload(fileName, compressedFile);
+      for (const file of files) {
+        let compressedFile = file;
+        try {
+          compressedFile = await imageCompression(file, options);
+        } catch (err) {
+          console.warn('Compression failed, using original file', err);
+        }
+        
+        const safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const uuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
+        const fileName = `${uuid}-${safeName}`;
+        
+        const { data, error } = await supabase.storage
+          .from('posts_images')
+          .upload(fileName, compressedFile);
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('posts_images')
+          .getPublicUrl(fileName);
+          
+        newUrls.push(publicUrl);
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('posts_images')
-        .getPublicUrl(fileName);
-
-      handleChange('fileUrl', publicUrl);
-      toast.success('Imagem carregada com sucesso!', { id: toastId });
+      setForm((prev) => ({
+        ...prev,
+        fileUrls: [...(prev.fileUrls || []), ...newUrls],
+        fileUrl: prev.fileUrl || newUrls[0] // Set primary for compat
+      }));
+      
+      toast.success('Upload concluído com sucesso!', { id: toastId });
     } catch (error) {
-      console.error(error);
-      toast.error('Erro ao fazer upload da imagem.');
+      console.error('Erro detalhado no upload:', error);
+      toast.error('Erro ao fazer upload da imagem. Tente novamente.');
     } finally {
       setIsUploading(false);
+      // Reset input
+      if (target) target.value = null;
     }
+  };
+
+  const removeImage = (indexToRemove) => {
+    setForm((prev) => {
+      const updatedUrls = prev.fileUrls.filter((_, i) => i !== indexToRemove);
+      return {
+        ...prev,
+        fileUrls: updatedUrls,
+        fileUrl: updatedUrls.length > 0 ? updatedUrls[0] : ''
+      };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -288,7 +328,12 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost }) {
                 <input
                   type="url"
                   value={form.fileUrl}
-                  onChange={e => handleChange('fileUrl', e.target.value)}
+                  onChange={e => {
+                    handleChange('fileUrl', e.target.value);
+                    if (e.target.value && (!form.fileUrls || form.fileUrls.length === 0)) {
+                       handleChange('fileUrls', [e.target.value]);
+                    }
+                  }}
                   placeholder="https://drive.google.com/... ou faça upload abaixo"
                   className="w-full pl-10 pr-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm"
                 />
@@ -298,8 +343,9 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost }) {
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleImageUpload}
-                  disabled={isUploading}
+                  disabled={isUploading || (form.fileUrls?.length >= 10)}
                   className="block w-full text-sm text-dark-300
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-full file:border-0
@@ -309,6 +355,27 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost }) {
                     file:cursor-pointer disabled:opacity-50"
                 />
               </div>
+
+              {/* Image Previews */}
+              {form.fileUrls?.length > 0 && (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {form.fileUrls.map((url, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-dark-600/50 group">
+                      <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <HiX className="w-4 h-4 text-white" />
+                      </button>
+                      <span className="absolute bottom-0 right-0 bg-black/80 px-1 text-[10px] text-white">
+                        {idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -21,11 +21,11 @@ const navItems = [
   { path: '/cronograma', label: 'Cronograma', icon: HiOutlineClock },
   { path: '/aprovacao', label: 'Aprovação', icon: HiOutlineCheckCircle },
   { path: '/swipe-file', label: 'Swipe File', icon: HiOutlineLightBulb },
-  { path: '/relatorios', label: 'Relatórios', icon: HiOutlineChartBar },
+  // { path: '/relatorios', label: 'Relatórios', icon: HiOutlineChartBar }, // Em desenvolvimento
   { path: '/tarefas', label: 'Guia de Tarefas', icon: HiOutlineClipboardList },
   { path: '/produtos', label: 'Produtos e Segmentos', icon: HiOutlineShoppingBag },
   { path: '/comandas', label: 'Gerar Comandas', icon: HiOutlineQrcode },
-  { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles },
+  // { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles }, // Em desenvolvimento
 ];
 
 export default function Sidebar() {
