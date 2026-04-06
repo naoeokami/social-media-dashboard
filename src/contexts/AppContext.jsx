@@ -99,7 +99,14 @@ export function AppProvider({ children }) {
         }
         if (todosRes.data) setTodos(todosRes.data);
         if (swipeRes.data) setSwipeItems(swipeRes.data);
-        if (shortcutsRes.data) setShortcuts(shortcutsRes.data);
+        
+        if (shortcutsRes.data && shortcutsRes.data.length > 0) {
+           setShortcuts(shortcutsRes.data);
+           localStorage.setItem('socialhub_shortcuts', JSON.stringify(shortcutsRes.data));
+        } else if (shortcutsRes.error || !shortcutsRes.data || shortcutsRes.data.length === 0) {
+           const local = localStorage.getItem('socialhub_shortcuts');
+           if (local) setShortcuts(JSON.parse(local));
+        }
         if (productsRes.data) setProducts(productsRes.data);
         if (segmentsRes.data) setSegments(segmentsRes.data);
 
@@ -262,23 +269,38 @@ export function AppProvider({ children }) {
   // Shortcuts CRUD
   const addShortcut = async (shortcut) => {
     const newShortcut = { ...shortcut, id: crypto.randomUUID() };
-    setShortcuts(prev => [...prev, newShortcut]);
+    setShortcuts(prev => {
+       const updated = [...prev, newShortcut];
+       localStorage.setItem('socialhub_shortcuts', JSON.stringify(updated));
+       return updated;
+    });
     if (hasSupabaseConfig) {
-      await supabase.from('shortcuts').insert({ ...newShortcut, user_id: user?.id });
+      const { error } = await supabase.from('shortcuts').insert({ ...newShortcut, user_id: user?.id });
+      if (error && error.code !== '42P01') console.error('Supabase AddShortcut Error:', error);
     }
   };
   
   const updateShortcut = async (id, data) => {
-    setShortcuts(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+    setShortcuts(prev => {
+       const updated = prev.map(s => s.id === id ? { ...s, ...data } : s);
+       localStorage.setItem('socialhub_shortcuts', JSON.stringify(updated));
+       return updated;
+    });
     if (hasSupabaseConfig) {
-      await supabase.from('shortcuts').update(data).eq('id', id);
+      const { error } = await supabase.from('shortcuts').update(data).eq('id', id);
+      if (error && error.code !== '42P01') console.error('Supabase UpdateShortcut Error:', error);
     }
   };
   
   const deleteShortcut = async (id) => {
-    setShortcuts(prev => prev.filter(s => s.id !== id));
+    setShortcuts(prev => {
+       const updated = prev.filter(s => s.id !== id);
+       localStorage.setItem('socialhub_shortcuts', JSON.stringify(updated));
+       return updated;
+    });
     if (hasSupabaseConfig) {
-      await supabase.from('shortcuts').delete().eq('id', id);
+      const { error } = await supabase.from('shortcuts').delete().eq('id', id);
+      if (error && error.code !== '42P01') console.error('Supabase DeleteShortcut Error:', error);
     }
   };
 
