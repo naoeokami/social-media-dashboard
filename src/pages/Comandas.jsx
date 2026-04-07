@@ -12,9 +12,12 @@ import {
   HiOutlineViewList,
   HiOutlineX
 } from 'react-icons/hi';
+import JsBarcode from 'jsbarcode';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import toast from 'react-hot-toast';
 import { supabase, hasSupabaseConfig } from '../lib/supabase';
 import { useApp } from '../contexts/AppContext';
@@ -50,6 +53,11 @@ export default function Comandas() {
     boxY: 38,
     boxRadius: 5
   });
+
+  const [exportOnlyQR, setExportOnlyQR] = useState(false);
+  const [codeType, setCodeType] = useState('qr'); // 'qr' or 'barcode'
+  const [dataSource, setDataSource] = useState('link'); // 'link' or 'controle'
+  const [exportFormat, setExportFormat] = useState('pdf'); // 'pdf' or 'zip'
 
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
 
@@ -148,15 +156,27 @@ export default function Comandas() {
           const row = rawData[i];
           if (!row) continue;
           
-          const codigo = row[0]; // Coluna A
+          const codigo = row[0]; // Coluna A (Ex: 1, 2, 3)
+          const controle = row[1]; // Coluna B (Ex: c1, c2, c3)
           const link = row[2];   // Coluna C
           
-          if (link && String(link).trim() !== '') {
+          // Re-format controle to 4 digits (e.g., c001, c048)
+          let formattedControle = '';
+          if (controle) {
+            const numeroControle = String(controle).toLowerCase().replace('c', '');
+            if (!isNaN(numeroControle) && numeroControle !== '') {
+              formattedControle = 'c' + String(numeroControle).padStart(3, '0');
+            } else {
+              formattedControle = controle;
+            }
+          }
+
+          if ((link && String(link).trim() !== '') || (formattedControle && String(formattedControle).trim() !== '')) {
             const numero = codigo !== undefined && codigo !== null 
               ? String(codigo).padStart(3, '0') 
               : String(validData.length + 1).padStart(3, '0');
               
-            validData.push({ numero, link });
+            validData.push({ numero, link, controle: formattedControle });
           }
         }
         
@@ -178,8 +198,6 @@ export default function Comandas() {
   const drawCard = async (ctx, canvasWidth, canvasHeight, itemData, currentSettings) => {
     // Calculo de porcentagens para Pixels absolutos usando o tamanho da página
     const qrPx = (currentSettings.qrSize / 100) * canvasWidth;
-    const qrYPx = (currentSettings.qrY / 100) * canvasHeight;
-    const textYPx = (currentSettings.textY / 100) * canvasHeight;
     const fontPx = (currentSettings.fontSize / 100) * canvasHeight;
     const boxWPx = (currentSettings.boxWidth / 100) * canvasWidth;
     const boxHPx = (currentSettings.boxHeight / 100) * canvasHeight;
@@ -187,8 +205,8 @@ export default function Comandas() {
     const boxYPx = (currentSettings.boxY / 100) * canvasHeight - (boxHPx / 2);
     const boxRadiusPx = (currentSettings.boxRadius / 100) * canvasWidth;
 
-    // 1. Draw Template
-    if (template) {
+    // 1. Draw Template (Skip if exportOnlyQR is true)
+    if (template && !exportOnlyQR) {
       const img = new Image();
       img.src = template;
       await new Promise((resolve) => {
@@ -202,8 +220,8 @@ export default function Comandas() {
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     }
 
-    // 2. Draw White Box
-    if (currentSettings.drawWhiteBox) {
+    // 2. Draw White Box (Skip if exportOnlyQR is true)
+    if (currentSettings.drawWhiteBox && !exportOnlyQR) {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.moveTo(boxXPx + boxRadiusPx, boxYPx);
@@ -219,36 +237,64 @@ export default function Comandas() {
       ctx.fill();
     }
 
-    // 3. Draw QR Code
-    if (itemData && itemData.link) {
+    // 3. Draw QR Code or Barcode
+    const content = dataSource === 'link' ? itemData?.link : itemData?.controle;
+    if (itemData && content) {
       try {
-        const qrDataUrl = await QRCode.toDataURL(itemData.link, {
-          width: Math.round(qrPx),
-          margin: 0,
-          errorCorrectionLevel: 'H'
-        });
-        
-        const qrImg = new Image();
-        qrImg.src = qrDataUrl;
-        await new Promise((resolve) => {
-          qrImg.onload = () => {
-            const qrXPx = (currentSettings.qrX / 100) * canvasWidth - (qrPx / 2);
-            ctx.drawImage(qrImg, qrXPx, qrYPx, qrPx, qrPx);
-            resolve();
-          };
-        });
+        if (codeType === 'qr') {
+          const qrDataUrl = await QRCode.toDataURL(content, {
+            width: Math.round(qrPx),
+            margin: 0,
+            errorCorrectionLevel: 'H'
+          });
+          
+          const qrImg = new Image();
+          qrImg.src = qrDataUrl;
+          await new Promise((resolve) => {
+            qrImg.onload = () => {
+              const qrXPx = (currentSettings.qrX / 100) * canvasWidth - (qrPx / 2);
+              const qrYPx = (currentSettings.qrY / 100) * canvasHeight - (qrPx / 2);
+              ctx.drawImage(qrImg, qrXPx, qrYPx, qrPx, qrPx);
+              resolve();
+            };
+          });
+        } else {
+          // CODE128 Barcode
+          const barcodeCanvas = document.createElement('canvas');
+          JsBarcode(barcodeCanvas, content, {
+            format: "CODE128",
+            displayValue: false,
+            margin: 0,
+            background: "transparent"
+          });
+          
+          const barcodeDataUrl = barcodeCanvas.toDataURL('image/png');
+          const barcodeImg = new Image();
+          barcodeImg.src = barcodeDataUrl;
+          await new Promise((resolve) => {
+            barcodeImg.onload = () => {
+              const qrXPx = (currentSettings.qrX / 100) * canvasWidth - (qrPx / 2);
+              const bWidth = qrPx;
+              const bHeight = qrPx * 0.4; // common ratio
+              const qrYPx = (currentSettings.qrY / 100) * canvasHeight - (bHeight / 2);
+              ctx.drawImage(barcodeImg, qrXPx, qrYPx, bWidth, bHeight);
+              resolve();
+            };
+          });
+        }
       } catch (err) {
-        console.error("Erro ao gerar QR Code:", err);
+        console.error("Erro ao gerar Código:", err);
       }
     }
 
-    // 4. Draw Text
+    // 4. Draw Text (Always drawn now, even if exportOnlyQR is true)
     if (itemData && itemData.numero) {
       ctx.fillStyle = currentSettings.textColor;
       ctx.font = `bold ${fontPx}px Inter, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
+      ctx.textBaseline = 'middle';
       const textXPx = (currentSettings.textX / 100) * canvasWidth;
+      const textYPx = (currentSettings.textY / 100) * canvasHeight;
       ctx.fillText(itemData.numero, textXPx, textYPx);
     }
   };
@@ -261,18 +307,18 @@ export default function Comandas() {
       canvas.width = pageWidth * 100;
       canvas.height = pageHeight * 100;
       
-      const sampleItem = data.length > 0 ? data[0] : { numero: '001', link: 'https://exemplo.com' };
+      const sampleItem = data.length > 0 ? data[0] : { numero: '001', link: 'https://exemplo.com', controle: 'c001' };
       
       await drawCard(ctx, canvas.width, canvas.height, sampleItem, settings);
       setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.9));
     };
     
     updatePreview();
-  }, [template, data, settings, pageWidth, pageHeight]);
+  }, [template, data, settings, pageWidth, pageHeight, exportOnlyQR, codeType, dataSource]);
 
   const handlePreGenerate = () => {
-    if (!template) {
-      toast.error('Por favor, faça o upload da imagem de fundo.');
+    if (!template && !exportOnlyQR) {
+      toast.error('Por favor, faça o upload da imagem de fundo ou marque para exportar apenas o código.');
       return;
     }
     if (data.length === 0) {
@@ -292,76 +338,97 @@ export default function Comandas() {
     
     setIsModalOpen(false);
     setIsGenerating(true);
-    const loadingToast = toast.loading('Gerando PDF aguarde...');
+    const loadingToast = toast.loading(`Gerando ${exportFormat.toUpperCase()} aguarde...`);
 
     try {
       const orientation = pageWidth > pageHeight ? 'landscape' : 'portrait';
-      const pdf = new jsPDF({
-        orientation,
-        unit: 'cm',
-        format: [pageWidth, pageHeight]
-      });
-
-      const hiddenCanvas = document.createElement('canvas');
-      hiddenCanvas.width = pageWidth * 100;
-      hiddenCanvas.height = pageHeight * 100;
-      const ctx = hiddenCanvas.getContext('2d');
-
-      for (let i = 0; i < data.length; i++) {
-        if (i > 0) pdf.addPage([pageWidth, pageHeight], orientation);
-        ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-        
-        await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
-        
-        const cardDataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
-        pdf.addImage(cardDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-        
-        if (i % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-      }
-
-      // Download it locally for the user right away
-      const safeFilename = docName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      pdf.save(`comandas_${safeFilename}.pdf`);
-
-      // Attempt to save to Supabase
-      if (hasSupabaseConfig && user) {
-        toast.loading('Salvando no histórico...', { id: loadingToast });
-        const pdfBlob = pdf.output('blob');
-        const storagePath = `${user.id}/${Date.now()}_${safeFilename}.pdf`;
-
-        const { error: uploadError } = await supabase.storage.from('comandas').upload(storagePath, pdfBlob, {
-          contentType: 'application/pdf',
-          upsert: false
+      
+      if (exportFormat === 'pdf') {
+        const pdf = new jsPDF({
+          orientation,
+          unit: 'cm',
+          format: [pageWidth, pageHeight]
         });
 
-        if (uploadError) {
-          console.error("Storage upload error:", uploadError);
-          toast.error('PDF baixado, mas a pasta "comandas" no Storage do Supabase não existe ou falta permissão!', { id: loadingToast, duration: 6000 });
-        } else {
-          const { data: { publicUrl } } = supabase.storage.from('comandas').getPublicUrl(storagePath);
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = pageWidth * 100;
+        hiddenCanvas.height = pageHeight * 100;
+        const ctx = hiddenCanvas.getContext('2d');
+
+        for (let i = 0; i < data.length; i++) {
+          if (i > 0) pdf.addPage([pageWidth, pageHeight], orientation);
+          ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
           
-          const { error: dbError } = await supabase.from('comandas_history').insert({
-            user_id: user.id,
-            name: docName,
-            file_url: publicUrl
-          });
+          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
           
-          if (dbError) {
-            console.error("DB insert error:", dbError);
-            toast.error(`PDF baixado, mas não foi possível salvar o histórico. Tabela 'comandas_history' pode não existir.`, { id: loadingToast, duration: 6000 });
-          } else {
-             toast.success('PDF gerado e salvo no histórico com sucesso!', { id: loadingToast });
+          const cardDataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
+          pdf.addImage(cardDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+          
+          if (i % 10 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
           }
         }
+
+        const safeFilename = (docName.replace(/[^a-z0-9]/gi, '_').toLowerCase()) || 'lote';
+        const pdfBlob = pdf.output('blob');
+        saveAs(pdfBlob, `comandas_${safeFilename}.pdf`);
+
+        // Attempt to save to Supabase
+        if (hasSupabaseConfig && user) {
+          toast.loading('Salvando no histórico...', { id: loadingToast });
+          const storagePath = `${user.id}/${Date.now()}_${safeFilename}.pdf`;
+
+          const { error: uploadError } = await supabase.storage.from('comandas').upload(storagePath, pdfBlob, {
+            contentType: 'application/pdf',
+            upsert: false
+          });
+
+          if (uploadError) {
+            console.error("Storage upload error:", uploadError);
+            toast.error('PDF baixado, mas não salvo no storage do Supabase.', { id: loadingToast, duration: 6000 });
+          } else {
+            const { data: { publicUrl } } = supabase.storage.from('comandas').getPublicUrl(storagePath);
+            await supabase.from('comandas_history').insert({
+              user_id: user.id,
+              name: docName,
+              file_url: publicUrl
+            });
+            toast.success('PDF gerado e salvo com sucesso!', { id: loadingToast });
+          }
+        } else {
+          toast.success('PDF gerado com sucesso!', { id: loadingToast });
+        }
+
       } else {
-        toast.success('PDF gerado com sucesso!', { id: loadingToast });
+        // Handle ZIP (.png)
+        const zip = new JSZip();
+        
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = pageWidth * 100;
+        hiddenCanvas.height = pageHeight * 100;
+        const ctx = hiddenCanvas.getContext('2d');
+
+        for (let i = 0; i < data.length; i++) {
+          ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
+          
+          const cardDataUrl = hiddenCanvas.toDataURL('image/png');
+          const base64Data = cardDataUrl.split(',')[1];
+          const filename = `comanda_${data[i].numero || (i+1)}.png`;
+          zip.file(filename, base64Data, { base64: true });
+          
+          if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        const safeFilename = (docName.replace(/[^a-z0-9]/gi, '_').toLowerCase()) || 'lote';
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, `comandas_${safeFilename}.zip`);
+        toast.success('Arquivo ZIP gerado com sucesso!', { id: loadingToast });
       }
 
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao gerar PDF', { id: loadingToast });
+      toast.error('Erro ao gerar exportação', { id: loadingToast });
     } finally {
       setIsGenerating(false);
     }
@@ -369,6 +436,37 @@ export default function Comandas() {
 
   const handleSettingChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: Number(value) }));
+  };
+
+  const handleAutoCenter = () => {
+    // Calcula a altura real do código em relação à altura total do cartão (%)
+    const cardW = pageWidth;
+    const cardH = pageHeight;
+    
+    const codeH_in_cm = codeType === 'qr' 
+      ? (settings.qrSize/100 * cardW) 
+      : (settings.qrSize/100 * cardW * 0.4);
+    const codeH_pct = (codeH_in_cm / cardH) * 100;
+    
+    // Altura do texto (%)
+    const textH_pct = settings.fontSize;
+    
+    // Espaçamento entre os elementos (8% da altura do cartão)
+    const gap_pct = 8;
+    
+    // Altura total do bloco (Código + Gap + Texto)
+    const blockH_pct = codeH_pct + gap_pct + textH_pct;
+    
+    // Margem superior para centralizar o bloco inteiro no meio do cartão
+    const topMargin_pct = (100 - blockH_pct) / 2;
+    
+    setSettings(prev => ({
+      ...prev,
+      qrX: 50,
+      textX: 50,
+      qrY: topMargin_pct + (codeH_pct / 2),
+      textY: topMargin_pct + codeH_pct + gap_pct + (textH_pct / 2)
+    }));
   };
 
   return (
@@ -442,7 +540,15 @@ export default function Comandas() {
 
             {/* Dimensions Section */}
             <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-white mb-4">2. Dimensões da Página</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-white">2. Dimensões da Página</h2>
+                <button 
+                  onClick={() => { setPageWidth(4); setPageHeight(3); }}
+                  className="px-3 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-medium transition-colors"
+                >
+                  Tamanho Padrão (4x3cm)
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-dark-200 mb-1.5">Largura (cm)</label>
@@ -469,7 +575,15 @@ export default function Comandas() {
 
             {/* Settings Section */}
             <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-white mb-4">3. Ajuste de Posições</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-white">3. Ajuste de Posições</h2>
+                <button 
+                  onClick={handleAutoCenter}
+                  className="px-3 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-medium transition-colors"
+                >
+                  Auto-Centralizar
+                </button>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 
@@ -575,13 +689,96 @@ export default function Comandas() {
                 )}
               </div>
 
+              {/* Novas Configurações */}
+              <div className="mt-8 pt-8 border-t border-dark-600/50 space-y-6">
+                <h3 className="text-md font-semibold text-white">Opções Adicionais</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Export Only QR */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-dark-200">Exportação</label>
+                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
+                      <button 
+                        onClick={() => setExportOnlyQR(false)}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${!exportOnlyQR ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Comanda Completa
+                      </button>
+                      <button 
+                        onClick={() => setExportOnlyQR(true)}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${exportOnlyQR ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Apenas Código
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Code Type */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-dark-200">Tipo de Código</label>
+                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
+                      <button 
+                        onClick={() => setCodeType('qr')}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${codeType === 'qr' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        QR Code
+                      </button>
+                      <button 
+                        onClick={() => setCodeType('barcode')}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${codeType === 'barcode' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Código de Barra
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Data Source */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-dark-200">Origem do Dado</label>
+                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
+                      <button 
+                        onClick={() => setDataSource('link')}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${dataSource === 'link' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Link Cardápio
+                      </button>
+                      <button 
+                        onClick={() => setDataSource('controle')}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${dataSource === 'controle' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Controle
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Export Format */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-dark-200">Formato de Arquivo</label>
+                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
+                      <button 
+                        onClick={() => setExportFormat('pdf')}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${exportFormat === 'pdf' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        PDF (.pdf)
+                      </button>
+                      <button 
+                        onClick={() => setExportFormat('zip')}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded ${exportFormat === 'zip' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        ZIP (.png)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             {/* Action Button */}
             <div className="flex justify-end">
               <button
                 onClick={handlePreGenerate}
-                disabled={isGenerating || !template || data.length === 0}
+                disabled={isGenerating || (!template && !exportOnlyQR) || data.length === 0}
                 className="flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-400 text-white rounded-xl font-semibold shadow-lg shadow-brand-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGenerating ? (
@@ -592,7 +789,7 @@ export default function Comandas() {
                 ) : (
                   <>
                     <HiOutlineDownload className="w-5 h-5" />
-                    Gerar PDF ({pageWidth} x {pageHeight} cm)
+                    Gerar {exportFormat === 'pdf' ? 'PDF' : 'ZIP'} ({pageWidth} x {pageHeight} cm)
                   </>
                 )}
               </button>
