@@ -88,7 +88,7 @@ export default function ProfileModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        <div className="flex bg-dark-800 border-b border-dark-600/50">
+        {/*<div className="flex bg-dark-800 border-b border-dark-600/50">
           <button 
             onClick={() => setActiveTab('profile')}
             className={`flex-1 py-3 text-sm font-semibold transition-colors border-b-2 ${activeTab === 'profile' ? 'border-brand-500 text-white' : 'border-transparent text-dark-400 hover:text-dark-200'}`}
@@ -101,7 +101,9 @@ export default function ProfileModal({ isOpen, onClose }) {
           >
             Integrações (APIs)
           </button>
-        </div>
+        </div>*/}
+
+        {/* Em desenvolvimento */}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {activeTab === 'profile' ? (
