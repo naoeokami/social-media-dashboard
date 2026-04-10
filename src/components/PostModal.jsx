@@ -327,14 +327,15 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                 <HiOutlineLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
                 <input
                   type="url"
-                  value={form.fileUrl}
+                  value={form.fileUrl?.includes('supabase') ? '' : form.fileUrl}
                   onChange={e => {
-                    handleChange('fileUrl', e.target.value);
-                    if (e.target.value && (!form.fileUrls || form.fileUrls.length === 0)) {
-                       handleChange('fileUrls', [e.target.value]);
+                    const val = e.target.value;
+                    handleChange('fileUrl', val);
+                    if (val && (!form.fileUrls || form.fileUrls.length === 0)) {
+                       handleChange('fileUrls', [val]);
                     }
                   }}
-                  placeholder="https://drive.google.com/... ou faça upload abaixo"
+                  placeholder="Link externo (Drive, Pinterest, etc) ou faça upload abaixo"
                   className="w-full pl-10 pr-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm"
                 />
               </div>
