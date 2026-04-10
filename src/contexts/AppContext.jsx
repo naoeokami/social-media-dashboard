@@ -149,17 +149,6 @@ export function AppProvider({ children }) {
              }
 
              setPosts(prev => {
-                const oldPost = prev.find(p => p.id === newPost.id);
-                
-                // Se o status mudou, mostrar toast de notificação
-                if (oldPost && oldPost.status !== newPost.status) {
-                  if (newPost.status === 'agendado') {
-                    toast.success(`Post "${newPost.title}" foi APROVADO!`, { icon: '✅', duration: 5000 });
-                  } else if (newPost.status === 'producao') {
-                    toast.error(`Post "${newPost.title}" precisa de ajustes.`, { icon: '⚠️', duration: 5000 });
-                  }
-                }
-
                 if (!prev.some(p => p.id === newPost.id)) return [newPost, ...prev];
                 return prev.map(p => p.id === newPost.id ? newPost : p);
              });
