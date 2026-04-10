@@ -187,27 +187,30 @@ export default function Calendar() {
                   {dayPosts.slice(0, view === 'week' ? 10 : 3).map(post => (
                     <div
                       key={post.id}
-                      className="group relative flex items-center gap-1 px-1.5 py-1 rounded-md text-xs transition-all hover:bg-dark-700/50"
+                      onClick={(e) => handleEditPost(post, e)}
+                      className="group relative flex items-center gap-1 px-1.5 py-1.5 rounded-md text-xs transition-all hover:bg-dark-700/50 cursor-pointer"
                       style={{ borderLeft: `2px solid ${getStatusColor(post.status)}` }}
                     >
                       <span className="truncate flex-1 flex items-center gap-1" style={{ color: post.status === 'producao' && post.feedback_note ? '#fbbf24' : '#e2e8f0' }}>
                         {post.status === 'producao' && post.feedback_note && (
-                          <HiOutlineExclamationCircle className="w-3 h-3 text-warning shrink-0" title="Ajustes Solicitados" />
+                          <HiOutlineExclamationCircle className="w-3.5 h-3.5 text-warning shrink-0" title="Ajustes Solicitados" />
                         )}
                         {post.title}
                       </span>
-                      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                      <div className="hidden group-hover:flex items-center gap-1 shrink-0">
                         <button
                           onClick={(e) => handleEditPost(post, e)}
-                          className="p-0.5 text-dark-400 hover:text-brand-400 transition-colors"
+                          className="p-1 text-dark-300 hover:text-brand-400 transition-colors bg-dark-800/80 rounded-md"
+                          title="Editar"
                         >
-                          <HiOutlinePencil className="w-3 h-3" />
+                          <HiOutlinePencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={(e) => handleDeletePost(post.id, e)}
-                          className="p-0.5 text-dark-400 hover:text-danger transition-colors"
+                          className="p-1 text-dark-300 hover:text-danger transition-colors bg-dark-800/80 rounded-md"
+                          title="Excluir"
                         >
-                          <HiOutlineTrash className="w-3 h-3" />
+                          <HiOutlineTrash className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>

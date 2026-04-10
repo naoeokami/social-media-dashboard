@@ -97,7 +97,11 @@ export default function Schedule() {
                     .filter(s => s.dayOfWeek === day)
                     .sort((a, b) => (a.startTime || a.time || '').localeCompare(b.startTime || b.time || ''))
                     .map(schedule => (
-                    <div key={schedule.id} className="bg-dark-900 rounded-lg p-3.5 border border-dark-600/30 group relative hover:border-brand-500/30 transition-all shadow-sm hover:shadow-brand-500/10 hover:-translate-y-0.5">
+                    <div 
+                      key={schedule.id} 
+                      onClick={() => openModal(schedule)}
+                      className="bg-dark-900 rounded-lg p-3.5 border border-dark-600/30 group relative hover:border-brand-500/30 transition-all shadow-sm hover:shadow-brand-500/10 hover:-translate-y-0.5 cursor-pointer"
+                    >
                       <div className="flex justify-between items-start mb-1.5">
                         <h4 className="font-medium text-white text-sm truncate pr-6">{schedule.title}</h4>
                       </div>
@@ -115,20 +119,21 @@ export default function Schedule() {
                       
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1.5 bg-dark-900/90 backdrop-blur pb-1 pl-1 rounded-bl">
                         <button 
-                          onClick={() => openModal(schedule)}
-                          className="p-1.5 text-dark-300 hover:text-white bg-dark-700 hover:bg-brand-500/20 rounded-md transition-colors"
+                          onClick={(e) => { e.stopPropagation(); openModal(schedule); }}
+                          className="p-2 text-dark-300 hover:text-white bg-dark-700 hover:bg-brand-500/20 rounded-md transition-colors"
                           title="Editar"
                         >
-                          <HiOutlinePencil className="w-3.5 h-3.5" />
+                          <HiOutlinePencil className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (confirm('Tem certeza que deseja excluir esta tarefa?')) deleteSchedule(schedule.id);
                           }}
-                          className="p-1.5 text-dark-300 hover:text-red-400 bg-dark-700 hover:bg-red-500/10 rounded-md transition-colors"
+                          className="p-2 text-dark-300 hover:text-red-400 bg-dark-700 hover:bg-red-500/10 rounded-md transition-colors"
                           title="Excluir"
                         >
-                          <HiOutlineTrash className="w-3.5 h-3.5" />
+                          <HiOutlineTrash className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
