@@ -134,24 +134,57 @@ export function AppProvider({ children }) {
     // Subscribe to realtime updates
     let postsChannel;
     if (hasSupabaseConfig && user) {
-      postsChannel = supabase.channel('realtime:posts')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, payload => {
-           setPosts(prev => {
+      postsChannel = supabase.channel('db-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, payload => {
+           console.log('Realtime change:', payload);
+           
+           if (payload.eventType === 'UPDATE') {
+             const newPost = payload.new;
+             
+             // Handle unmigrated JSON array logic
+             if (newPost.fileUrl && newPost.fileUrl.startsWith('[')) {
+                try { newPost.fileUrls = JSON.parse(newPost.fileUrl); } catch(e) { newPost.fileUrls = [newPost.fileUrl]; }
+             } else if (newPost.fileUrl) {
+                newPost.fileUrls = [newPost.fileUrl];
+             }
+
+             setPosts(prev => {
+                const oldPost = prev.find(p => p.id === newPost.id);
+                
+                // Se o status mudou, mostrar toast de notificação
+                if (oldPost && oldPost.status !== newPost.status) {
+                  if (newPost.status === 'agendado') {
+                    toast.success(`Post "${newPost.title}" foi APROVADO!`, { icon: '✅', duration: 5000 });
+                  } else if (newPost.status === 'producao') {
+                    toast.error(`Post "${newPost.title}" precisa de ajustes.`, { icon: '⚠️', duration: 5000 });
+                  }
+                }
+
+                if (!prev.some(p => p.id === newPost.id)) return [newPost, ...prev];
+                return prev.map(p => p.id === newPost.id ? newPost : p);
+             });
+           }
+           
+           if (payload.eventType === 'INSERT') {
               const newPost = payload.new;
-              // Check if post exists locally
-              if (!prev.some(p => p.id === newPost.id)) return prev;
-              
-              // Handle unmigrated JSON array logic
               if (newPost.fileUrl && newPost.fileUrl.startsWith('[')) {
                  try { newPost.fileUrls = JSON.parse(newPost.fileUrl); } catch(e) { newPost.fileUrls = [newPost.fileUrl]; }
               } else if (newPost.fileUrl) {
                  newPost.fileUrls = [newPost.fileUrl];
               }
-              
-              return prev.map(p => p.id === newPost.id ? newPost : p);
-           });
+              setPosts(prev => {
+                if (prev.some(p => p.id === newPost.id)) return prev;
+                return [newPost, ...prev];
+              });
+           }
+           
+           if (payload.eventType === 'DELETE') {
+              setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Realtime subscription status:', status);
+        });
     }
 
     return () => {
