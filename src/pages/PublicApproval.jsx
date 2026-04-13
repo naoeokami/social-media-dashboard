@@ -43,7 +43,8 @@ export default function PublicApproval() {
     async function loadPost() {
       let fetchedData = null;
       if (hasSupabaseConfig) {
-        const { data } = await supabase.from('posts').select('*').eq('id', id).single();
+        const { data, error } = await supabase.from('posts').select('*').eq('id', id).single();
+        if (error) console.error('Erro ao buscar post do Supabase:', error);
         fetchedData = data;
       } else {
         fetchedData = getItemById('posts', id);
@@ -70,7 +71,8 @@ export default function PublicApproval() {
     }
 
     if (hasSupabaseConfig) {
-      await supabase.from('posts').update(updateData).eq('id', id);
+      const { error } = await supabase.from('posts').update(updateData).eq('id', id);
+      if (error) console.error('Erro ao atualizar post no Supabase:', error);
     } else {
       updateItem('posts', id, updateData);
     }
