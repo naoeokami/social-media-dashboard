@@ -73,6 +73,8 @@ export function AppProvider({ children }) {
         if (localSegments) setSegments(JSON.parse(localSegments));
         const localSchedules = localStorage.getItem('socialhub_schedules');
         if (localSchedules) setSchedules(JSON.parse(localSchedules));
+        const localSwipe = localStorage.getItem('socialhub_swipe');
+        if (localSwipe) setSwipeItems(JSON.parse(localSwipe));
         return;
       }
 
@@ -98,7 +100,28 @@ export function AppProvider({ children }) {
            setPosts(parsedPosts);
         }
         if (todosRes.data) setTodos(todosRes.data);
-        if (swipeRes.data) setSwipeItems(swipeRes.data);
+        if (swipeRes.data) {
+          const mappedSwipe = swipeRes.data.map(item => ({
+            ...item,
+            createdAt: item.created_at || item.createdAt
+          }));
+          
+          const localSwipeStr = localStorage.getItem('socialhub_swipe');
+          const localSwipe = localSwipeStr ? JSON.parse(localSwipeStr) : [];
+          
+          // Merge para não perder itens locais caso o banco falhe
+          const map = new Map();
+          localSwipe.forEach(i => map.set(i.id, i));
+          mappedSwipe.forEach(i => map.set(i.id, i));
+          
+          const merged = Array.from(map.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          
+          setSwipeItems(merged);
+          localStorage.setItem('socialhub_swipe', JSON.stringify(merged));
+        } else {
+          const localSwipe = localStorage.getItem('socialhub_swipe');
+          if (localSwipe) setSwipeItems(JSON.parse(localSwipe));
+        }
         
         if (shortcutsRes.data && shortcutsRes.data.length > 0) {
            setShortcuts(shortcutsRes.data);
@@ -259,7 +282,8 @@ export function AppProvider({ children }) {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
     
     if (hasSupabaseConfig) {
-      await supabase.from('todos').update({ done: !todo.done }).eq('id', id);
+      const { error } = await supabase.from('todos').update({ done: !todo.done }).eq('id', id);
+      if (error) toast.error("Falha ao sincronizar alteração no banco.");
     }
   };
 
@@ -272,17 +296,39 @@ export function AppProvider({ children }) {
 
   // Swipe File CRUD
   const addSwipeItem = async (item) => {
-    const newItem = { ...item, id: crypto.randomUUID() };
-    setSwipeItems(prev => [newItem, ...prev]);
+    const newItem = { ...item, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    setSwipeItems(prev => {
+      const updated = [newItem, ...prev];
+      localStorage.setItem('socialhub_swipe', JSON.stringify(updated));
+      return updated;
+    });
     
     if (hasSupabaseConfig) {
-      await supabase.from('swipe_items').insert({ ...newItem, user_id: user?.id });
+      const dbItem = { 
+        ...newItem, 
+        user_id: user?.id,
+        created_at: newItem.createdAt 
+      };
+      // Remove o campo camelCase antes de enviar para evitar erro de coluna inexistente
+      delete dbItem.createdAt;
+
+      const { error } = await supabase.from('swipe_items').insert(dbItem);
+      if (error) {
+        console.error('Erro ao salvar Swipe:', error);
+        toast.error(`Erro no banco: ${error.message}`);
+      } else {
+        toast.success("Referência salva no banco!");
+      }
     }
     return newItem;
   };
 
   const deleteSwipeItem = async (id) => {
-    setSwipeItems(prev => prev.filter(s => s.id !== id));
+    setSwipeItems(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      localStorage.setItem('socialhub_swipe', JSON.stringify(updated));
+      return updated;
+    });
     if (hasSupabaseConfig) {
       await supabase.from('swipe_items').delete().eq('id', id);
     }
@@ -298,7 +344,10 @@ export function AppProvider({ children }) {
     });
     if (hasSupabaseConfig) {
       const { error } = await supabase.from('shortcuts').insert({ ...newShortcut, user_id: user?.id });
-      if (error && error.code !== '42P01') console.error('Supabase AddShortcut Error:', error);
+      if (error) {
+        console.error('Supabase AddShortcut Error:', error);
+        toast.error("Erro ao salvar atalho no banco.");
+      }
     }
   };
   
@@ -326,7 +375,6 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Products CRUD
   const addProduct = async (product) => {
     const newProduct = { ...product, id: crypto.randomUUID() };
     setProducts(prev => {
@@ -334,7 +382,13 @@ export function AppProvider({ children }) {
       if (!hasSupabaseConfig) localStorage.setItem('socialhub_products', JSON.stringify(updated));
       return updated;
     });
-    if (hasSupabaseConfig) await supabase.from('products').insert({ ...newProduct, user_id: user?.id });
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('products').insert({ ...newProduct, user_id: user?.id });
+      if (error) {
+        console.error('Supabase AddProduct Error:', error);
+        toast.error("Erro ao salvar produto no banco.");
+      }
+    }
   };
 
   const updateProduct = async (id, data) => {
@@ -343,7 +397,10 @@ export function AppProvider({ children }) {
       if (!hasSupabaseConfig) localStorage.setItem('socialhub_products', JSON.stringify(updated));
       return updated;
     });
-    if (hasSupabaseConfig) await supabase.from('products').update(data).eq('id', id);
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('products').update(data).eq('id', id);
+      if (error) toast.error("Erro ao atualizar produto no banco.");
+    }
   };
 
   const deleteProduct = async (id) => {
@@ -355,7 +412,6 @@ export function AppProvider({ children }) {
     if (hasSupabaseConfig) await supabase.from('products').delete().eq('id', id);
   };
 
-  // Segments CRUD
   const addSegment = async (name) => {
     const newSegment = { id: crypto.randomUUID(), name };
     setSegments(prev => {
@@ -363,7 +419,13 @@ export function AppProvider({ children }) {
       if (!hasSupabaseConfig) localStorage.setItem('socialhub_segments', JSON.stringify(updated));
       return updated;
     });
-    if (hasSupabaseConfig) await supabase.from('segments').insert({ ...newSegment, user_id: user?.id });
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('segments').insert({ ...newSegment, user_id: user?.id });
+      if (error) {
+        console.error('Supabase AddSegment Error:', error);
+        toast.error("Erro ao salvar segmento no banco.");
+      }
+    }
   };
 
   const deleteSegment = async (id) => {
@@ -372,7 +434,10 @@ export function AppProvider({ children }) {
       if (!hasSupabaseConfig) localStorage.setItem('socialhub_segments', JSON.stringify(updated));
       return updated;
     });
-    if (hasSupabaseConfig) await supabase.from('segments').delete().eq('id', id);
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('segments').delete().eq('id', id);
+      if (error) toast.error("Erro ao remover segmento do banco.");
+    }
   };
 
   // Schedules CRUD
