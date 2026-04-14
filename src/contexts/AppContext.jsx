@@ -99,7 +99,27 @@ export function AppProvider({ children }) {
            });
            setPosts(parsedPosts);
         }
-        if (todosRes.data) setTodos(todosRes.data);
+        if (todosRes.data && todosRes.data.length > 0) {
+          const mappedTodos = todosRes.data.map(item => ({
+            ...item,
+            createdAt: item.created_at || item.createdAt
+          }));
+          
+          const localTodosStr = localStorage.getItem('socialhub_todos');
+          const localTodos = localTodosStr ? JSON.parse(localTodosStr) : [];
+          
+          const map = new Map();
+          localTodos.forEach(i => map.set(i.id, i));
+          mappedTodos.forEach(i => map.set(i.id, i));
+          
+          const merged = Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          
+          setTodos(merged);
+          localStorage.setItem('socialhub_todos', JSON.stringify(merged));
+        } else {
+          const localTodos = localStorage.getItem('socialhub_todos');
+          if (localTodos) setTodos(JSON.parse(localTodos));
+        }
         if (swipeRes.data) {
           const mappedSwipe = swipeRes.data.map(item => ({
             ...item,
@@ -267,11 +287,15 @@ export function AppProvider({ children }) {
 
   // Todos CRUD
   const addTodo = async (text) => {
-    const newTodo = { id: crypto.randomUUID(), text, done: false };
-    setTodos(prev => [...prev, newTodo]);
+    const newTodo = { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString() };
+    setTodos(prev => {
+      const updated = [...prev, newTodo];
+      localStorage.setItem('socialhub_todos', JSON.stringify(updated));
+      return updated;
+    });
     
     if (hasSupabaseConfig) {
-      await supabase.from('todos').insert({ ...newTodo, user_id: user?.id });
+      await supabase.from('todos').insert({ ...newTodo, user_id: user?.id, created_at: newTodo.createdAt });
     }
   };
 
@@ -279,16 +303,27 @@ export function AppProvider({ children }) {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
     
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    setTodos(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, done: !t.done } : t);
+      localStorage.setItem('socialhub_todos', JSON.stringify(updated));
+      return updated;
+    });
     
     if (hasSupabaseConfig) {
       const { error } = await supabase.from('todos').update({ done: !todo.done }).eq('id', id);
-      if (error) toast.error("Falha ao sincronizar alteração no banco.");
+      if (error) {
+        console.error("Supabase toggle error:", error);
+        toast.error("Tarefa salva localmente (sem conexão c/ banco).");
+      }
     }
   };
 
   const deleteTodo = async (id) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
+    setTodos(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      localStorage.setItem('socialhub_todos', JSON.stringify(updated));
+      return updated;
+    });
     if (hasSupabaseConfig) {
       await supabase.from('todos').delete().eq('id', id);
     }
