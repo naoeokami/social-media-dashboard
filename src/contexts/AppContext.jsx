@@ -143,10 +143,24 @@ export function AppProvider({ children }) {
           if (localSwipe) setSwipeItems(JSON.parse(localSwipe));
         }
         
-        if (shortcutsRes.data && shortcutsRes.data.length > 0) {
-           setShortcuts(shortcutsRes.data);
-           localStorage.setItem('socialhub_shortcuts', JSON.stringify(shortcutsRes.data));
-        } else if (shortcutsRes.error || !shortcutsRes.data || shortcutsRes.data.length === 0) {
+        if (shortcutsRes.data) {
+           const mappedShortcuts = shortcutsRes.data.map(item => ({
+             ...item,
+             createdAt: item.created_at || item.createdAt
+           }));
+           
+           const localStr = localStorage.getItem('socialhub_shortcuts');
+           const localData = localStr ? JSON.parse(localStr) : [];
+           
+           const map = new Map();
+           localData.forEach(i => map.set(i.id, i));
+           mappedShortcuts.forEach(i => map.set(i.id, i));
+           
+           const merged = Array.from(map.values());
+           
+           setShortcuts(merged);
+           localStorage.setItem('socialhub_shortcuts', JSON.stringify(merged));
+        } else {
            const local = localStorage.getItem('socialhub_shortcuts');
            if (local) setShortcuts(JSON.parse(local));
         }
@@ -371,17 +385,22 @@ export function AppProvider({ children }) {
 
   // Shortcuts CRUD
   const addShortcut = async (shortcut) => {
-    const newShortcut = { ...shortcut, id: crypto.randomUUID() };
+    const newShortcut = { ...shortcut, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     setShortcuts(prev => {
        const updated = [...prev, newShortcut];
        localStorage.setItem('socialhub_shortcuts', JSON.stringify(updated));
        return updated;
     });
     if (hasSupabaseConfig) {
-      const { error } = await supabase.from('shortcuts').insert({ ...newShortcut, user_id: user?.id });
+      const dbItem = { ...newShortcut, user_id: user?.id, created_at: newShortcut.createdAt };
+      delete dbItem.createdAt;
+      
+      const { error } = await supabase.from('shortcuts').insert(dbItem);
       if (error) {
         console.error('Supabase AddShortcut Error:', error);
-        toast.error("Erro ao salvar atalho no banco.");
+        toast.error(`Erro ao salvar atalho: ${error.message}`);
+      } else {
+        toast.success("Atalho salvo no banco!");
       }
     }
   };
