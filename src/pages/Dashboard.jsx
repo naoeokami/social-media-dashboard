@@ -208,7 +208,7 @@ export default function Dashboard() {
           <form onSubmit={handleAddShortcut} className="mb-4 flex flex-col sm:flex-row gap-2 animate-slide-up p-3 bg-dark-700/30 rounded-xl border border-dark-600/30">
             <input type="text" placeholder="Nome" value={newShortcut.name} onChange={e => setNewShortcut({...newShortcut, name: e.target.value})} className="flex-1 px-3 py-1.5 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-xs" required />
             <input type="url" placeholder="URL" value={newShortcut.url} onChange={e => setNewShortcut({...newShortcut, url: e.target.value})} className="flex-1 px-3 py-1.5 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-xs" required />
-            <input maxLength={1} type="text" placeholder="Emoji" value={newShortcut.icon} onChange={e => setNewShortcut({...newShortcut, icon: e.target.value})} className="w-16 px-3 py-1.5 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-xs text-center" />
+            <input maxLength={2} type="text" placeholder="Emoji" value={newShortcut.icon} onChange={e => setNewShortcut({...newShortcut, icon: e.target.value})} className="w-16 px-3 py-1.5 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-xs text-center" />
             <button type="submit" className="px-3 py-1.5 gradient-brand rounded-lg text-white text-xs font-medium">Salvar</button>
           </form>
         )}
