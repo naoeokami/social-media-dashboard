@@ -245,8 +245,8 @@ export default function Dashboard() {
 
         {/* Quick Stats */}
         <div className="lg:col-span-2 glass-card p-5">
-          <h3 className="font-semibold text-white text-sm mb-4">Resumo da Semana</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <h3 className="font-semibold text-white text-sm mb-3">Resumo da Semana</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
               <p className="text-2xl font-bold gradient-text">{posts.filter(p => p.status === 'agendado').length}</p>
               <p className="text-xs text-dark-400 mt-1">Posts Agendados</p>
@@ -259,10 +259,10 @@ export default function Dashboard() {
               <p className="text-2xl font-bold text-warning">{posts.filter(p => p.status === 'aprovacao' || p.status === 'producao').length}</p>
               <p className="text-xs text-dark-400 mt-1">Aguardando</p>
             </div>
-            <div className="text-center p-4 rounded-xl bg-dark-700/30">
+            {/* <div className="text-center p-4 rounded-xl bg-dark-700/30">
               <p className="text-2xl font-bold text-brand-400">N/D</p>
               <p className="text-xs text-dark-400 mt-1">Alcance Total</p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

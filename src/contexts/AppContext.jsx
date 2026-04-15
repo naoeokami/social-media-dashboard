@@ -309,7 +309,14 @@ export function AppProvider({ children }) {
     });
     
     if (hasSupabaseConfig) {
-      await supabase.from('todos').insert({ ...newTodo, user_id: user?.id, created_at: newTodo.createdAt });
+      const dbTodo = { ...newTodo, user_id: user?.id, created_at: newTodo.createdAt };
+      delete dbTodo.createdAt; // Remove camelCase
+      
+      const { error } = await supabase.from('todos').insert(dbTodo);
+      if (error) {
+        console.error("Supabase addTodo Error:", error);
+        toast.error(`Falha ao salvar tarefa no banco: ${error.message}`);
+      }
     }
   };
 
