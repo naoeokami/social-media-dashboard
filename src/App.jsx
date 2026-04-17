@@ -31,6 +31,11 @@ export default function App() {
       <Toaster position="top-right" toastOptions={{ className: 'bg-dark-800 text-white border border-dark-600/50' }} />
       <Routes>
         <Route path="/p/:id" element={<PublicApproval />} />
+        <Route path="/gerador-de-comandas" element={
+          <div className="min-h-screen bg-dark-900 p-4 sm:p-6">
+            <Comandas minimal={true} />
+          </div>
+        } />
         
         {!user ? (
           <Route path="*" element={<Login />} />

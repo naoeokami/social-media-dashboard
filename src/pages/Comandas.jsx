@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 import { supabase, hasSupabaseConfig } from '../lib/supabase';
 import { useApp } from '../contexts/AppContext';
 
-export default function Comandas() {
+export default function Comandas({ minimal = false }) {
   const { user } = useApp();
   const [activeTab, setActiveTab] = useState('gerar');
   const [history, setHistory] = useState([]);
@@ -470,39 +470,42 @@ export default function Comandas() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Comandas App</h1>
-          <p className="text-dark-300 mt-1">Crie PDFs de comandas e consulte seu histórico gerado previamente.</p>
+    <div className={`space-y-6 max-w-7xl mx-auto pb-12 ${minimal ? 'pt-6' : ''}`}>
+      {!minimal && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Comandas App</h1>
+            <p className="text-dark-300 mt-1">Crie PDFs de comandas e consulte seu histórico gerado previamente.</p>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Tabs */}
-      <div className="flex bg-dark-800/80 p-1.5 rounded-xl border border-dark-600/50 w-full md:w-fit">
-        <button
-          onClick={() => setActiveTab('gerar')}
-          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'gerar' 
-              ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25' 
-              : 'text-dark-300 hover:text-white hover:bg-dark-700'
-          }`}
-        >
-          <HiOutlineViewGrid className="w-5 h-5" />
-          Gerar Comandas
-        </button>
-        <button
-          onClick={() => setActiveTab('historico')}
-          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'historico' 
-              ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25' 
-              : 'text-dark-300 hover:text-white hover:bg-dark-700'
-          }`}
-        >
-          <HiOutlineViewList className="w-5 h-5" />
-          Histórico
-        </button>
-      </div>
+      {!minimal && (
+        <div className="flex bg-dark-800/80 p-1.5 rounded-xl border border-dark-600/50 w-full md:w-fit">
+          <button
+            onClick={() => setActiveTab('gerar')}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'gerar' 
+                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25' 
+                : 'text-dark-300 hover:text-white hover:bg-dark-700'
+            }`}
+          >
+            <HiOutlineViewGrid className="w-5 h-5" />
+            Gerar Comandas
+          </button>
+          <button
+            onClick={() => setActiveTab('historico')}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'historico' 
+                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25' 
+                : 'text-dark-300 hover:text-white hover:bg-dark-700'
+            }`}
+          >
+            <HiOutlineViewList className="w-5 h-5" />
+            Histórico
+          </button>
+        </div>
+      )}
 
       {activeTab === 'gerar' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
