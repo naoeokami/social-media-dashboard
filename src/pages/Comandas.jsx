@@ -470,329 +470,417 @@ export default function Comandas({ minimal = false }) {
   };
 
   return (
-    <div className={`space-y-6 max-w-7xl mx-auto pb-12 ${minimal ? 'pt-6' : ''}`}>
+    <div className={`space-y-8 max-w-7xl mx-auto pb-12 ${minimal ? 'pt-8 px-4 sm:px-0' : ''}`}>
       {!minimal && (
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-fade-in">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Comandas App</h1>
-            <p className="text-dark-300 mt-1">Crie PDFs de comandas e consulte seu histórico gerado previamente.</p>
+            <div className="flex items-center gap-2 text-brand-400 text-xs font-bold uppercase tracking-[0.3em] mb-2">
+              <span className="w-8 h-[1px] bg-brand-500"></span>
+              Ferramentas de Produção
+            </div>
+            <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
+              Gerador de <span className="gradient-text">Comandas</span>
+            </h1>
+            <p className="text-dark-400 mt-2 max-w-2xl text-sm leading-relaxed">
+              Crie lotes de comandas profissionais com QR Code ou Código de Barras integrados. 
+              Ideal para restaurantes, eventos e controle de acesso.
+            </p>
           </div>
         </div>
       )}
 
+      {/* Modern Tab System */}
       {!minimal && (
-        <div className="flex bg-dark-800/80 p-1.5 rounded-xl border border-dark-600/50 w-full md:w-fit">
-          <button
-            onClick={() => setActiveTab('gerar')}
-            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'gerar' 
-                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25' 
-                : 'text-dark-300 hover:text-white hover:bg-dark-700'
-            }`}
-          >
-            <HiOutlineViewGrid className="w-5 h-5" />
-            Gerar Comandas
-          </button>
-          <button
-            onClick={() => setActiveTab('historico')}
-            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'historico' 
-                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25' 
-                : 'text-dark-300 hover:text-white hover:bg-dark-700'
-            }`}
-          >
-            <HiOutlineViewList className="w-5 h-5" />
-            Histórico
-          </button>
+        <div className="flex p-1.5 rounded-2xl bg-dark-800/50 border border-dark-600/30 w-fit glass">
+          {[
+            { id: 'gerar', label: 'Gerador Principal', icon: HiOutlineViewGrid },
+            { id: 'historico', label: 'Histórico de Lotes', icon: HiOutlineViewList }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-brand-500 text-white shadow-lg glow-brand' 
+                  : 'text-dark-400 hover:text-white hover:bg-dark-700/50'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Step Indicator (Only in Generator) */}
+      {activeTab === 'gerar' && (
+        <div className="hidden md:flex items-center justify-between px-12 py-6 glass-card border-none bg-dark-800/20">
+          {[
+            { num: '01', title: 'Upload', desc: 'Arquivos Base' },
+            { num: '02', title: 'Layout', desc: 'Ajuste Visual' },
+            { num: '03', title: 'Saída', desc: 'Exportação' }
+          ].map((s, idx) => (
+            <div key={s.num} className="flex items-center gap-4">
+              <span className="text-2xl font-black text-dark-700">{s.num}</span>
+              <div>
+                <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-tight">{s.title}</h4>
+                <p className="text-xs text-dark-300 font-medium">{s.desc}</p>
+              </div>
+              {idx < 2 && <div className="w-16 h-[2px] bg-dark-700 mx-8 rounded-full" />}
+            </div>
+          ))}
         </div>
       )}
 
       {activeTab === 'gerar' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
           {/* Left Column - Controls */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-8 space-y-8">
             
-            {/* Upload Section */}
-            <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
-              <h2 className="text-lg font-semibold text-white mb-4">1. Arquivos Base</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                {/* Template Upload */}
-                <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-dark-600 rounded-xl hover:border-brand-500 hover:bg-dark-700/50 transition-all cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-dark-700 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <HiOutlinePhotograph className="w-6 h-6 text-brand-400" />
+            {/* Step 1: Uploads */}
+            <div className="glass-card p-8 border-t-2 border-t-brand-500/20">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-400">
+                    <HiOutlineUpload className="w-6 h-6" />
                   </div>
-                  <span className="text-sm font-medium text-white mb-1">Upload Fundo (Imagem)</span>
-                  <span className="text-xs text-dark-400 text-center">JPG ou PNG sem o QR Code e número</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleTemplateUpload} />
-                  {template && <span className="mt-2 text-xs text-brand-400 font-medium">✓ Imagem carregada</span>}
-                </label>
-
-                {/* Excel Upload */}
-                <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-dark-600 rounded-xl hover:border-brand-500 hover:bg-dark-700/50 transition-all cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-dark-700 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <HiOutlineDocumentText className="w-6 h-6 text-brand-400" />
-                  </div>
-                  <span className="text-sm font-medium text-white mb-1">Upload Dados (Excel)</span>
-                  <span className="text-xs text-dark-400 text-center">dados.xlsx (A: Código, C: Link)</span>
-                  <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
-                  {data.length > 0 && <span className="mt-2 text-xs text-brand-400 font-medium">✓ {data.length} registros</span>}
-                </label>
-              </div>
-            </div>
-
-            {/* Dimensions Section */}
-            <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-white">2. Dimensões da Página</h2>
-                <button 
-                  onClick={() => { setPageWidth(4); setPageHeight(3); }}
-                  className="px-3 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-medium transition-colors"
-                >
-                  Tamanho Padrão (4x3cm)
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-dark-200 mb-1.5">Largura (cm)</label>
-                  <input 
-                    type="number" 
-                    step="0.1" 
-                    value={pageWidth} 
-                    onChange={(e) => setPageWidth(Number(e.target.value) || 6.5)}
-                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-                  />
+                  <h2 className="text-xl font-black text-white uppercase tracking-wider">01. Arquivos Base</h2>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-dark-200 mb-1.5">Altura (cm)</label>
-                  <input 
-                    type="number" 
-                    step="0.1" 
-                    value={pageHeight} 
-                    onChange={(e) => setPageHeight(Number(e.target.value) || 9.5)}
-                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Settings Section */}
-            <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-white">3. Ajuste de Posições</h2>
-                <button 
-                  onClick={handleAutoCenter}
-                  className="px-3 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-medium transition-colors"
-                >
-                  Auto-Centralizar
-                </button>
+                {template && data.length > 0 && <span className="flex items-center gap-1.5 text-green-500 text-[10px] font-black uppercase tracking-widest bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  Pronto
+                </span>}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Template Upload */}
                 <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                    <span>Tamanho do QR Code</span>
-                    <span className="text-brand-400">{settings.qrSize}%</span>
+                   <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl transition-all cursor-pointer group ${template ? 'border-brand-500/50 bg-brand-500/5' : 'border-dark-600 hover:border-brand-500 hover:bg-dark-700/50'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all group-hover:rotate-12 ${template ? 'bg-brand-500 text-white shadow-lg glow-brand' : 'bg-dark-700 text-brand-400'}`}>
+                      <HiOutlinePhotograph className="w-7 h-7" />
+                    </div>
+                    <span className="text-sm font-black text-white uppercase tracking-widest mb-1 group-hover:text-brand-400 transition-colors pointer-events-none">Fundo (Design)</span>
+                    <p className="text-[10px] text-dark-400 text-center px-4 leading-relaxed pointer-events-none">Seu design limpo sem os dados dinâmicos</p>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleTemplateUpload} />
                   </label>
-                  <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500" />
+                  {template && (
+                    <div className="flex items-center justify-between bg-dark-900/50 p-2 rounded-xl border border-dark-600/30">
+                       <span className="text-[10px] font-bold text-dark-400 ml-2">Imagem Base ✓</span>
+                       <button onClick={() => setTemplate(null)} className="p-1.5 hover:bg-red-500/10 text-dark-500 hover:text-red-500 rounded-lg transition-colors">
+                         <HiOutlineTrash className="w-4 h-4" />
+                       </button>
+                    </div>
+                  )}
                 </div>
 
+                {/* Excel Upload */}
                 <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                    <span>Posição Vertical QR Code (Y)</span>
-                    <span className="text-brand-400">{settings.qrY}%</span>
+                  <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl transition-all cursor-pointer group ${data.length > 0 ? 'border-brand-500/50 bg-brand-500/5' : 'border-dark-600 hover:border-brand-500 hover:bg-dark-700/50'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all group-hover:rotate-12 ${data.length > 0 ? 'bg-brand-500 text-white shadow-lg glow-brand' : 'bg-dark-700 text-brand-400'}`}>
+                      <HiOutlineDocumentText className="w-7 h-7" />
+                    </div>
+                    <span className="text-sm font-black text-white uppercase tracking-widest mb-1 group-hover:text-brand-400 transition-colors pointer-events-none">Planilha (Dados)</span>
+                    <p className="text-[10px] text-dark-400 text-center px-4 leading-relaxed pointer-events-none">Arquivo Excel com lista de IDs e Links</p>
+                    <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
                   </label>
-                  <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                    <span>Posição Horizontal QR Code (X)</span>
-                    <span className="text-brand-400">{settings.qrX}%</span>
-                  </label>
-                  <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                    <span>Posição Horizontal Texto (X)</span>
-                    <span className="text-brand-400">{settings.textX}%</span>
-                  </label>
-                  <input type="range" min="0" max="100" value={settings.textX} onChange={(e) => handleSettingChange('textX', e.target.value)} className="w-full accent-brand-500" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                    <span>Tamanho do Texto</span>
-                    <span className="text-brand-400">{settings.fontSize}%</span>
-                  </label>
-                  <input type="range" min="1" max="30" value={settings.fontSize} onChange={(e) => handleSettingChange('fontSize', e.target.value)} className="w-full accent-brand-500" />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                    <span>Posição Vertical Texto (Y)</span>
-                    <span className="text-brand-400">{settings.textY}%</span>
-                  </label>
-                  <input type="range" min="0" max="100" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500" />
-                </div>
-
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-dark-600/50">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={settings.drawWhiteBox} 
-                    onChange={(e) => setSettings(p => ({...p, drawWhiteBox: e.target.checked}))}
-                    className="w-5 h-5 rounded border-dark-500 bg-dark-700 text-brand-500 focus:ring-brand-500 focus:ring-offset-dark-800"
-                  />
-                  <span className="text-sm font-medium text-white">Desenhar Fundo Branco Arredondado (Atrás do QR/Texto)</span>
-                </label>
-
-                {settings.drawWhiteBox && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-6">
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                        <span>Largura da Caixa</span>
-                        <span className="text-brand-400">{settings.boxWidth}%</span>
-                      </label>
-                      <input type="range" min="10" max="100" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500" />
+                  {data.length > 0 && (
+                    <div className="flex items-center justify-between bg-dark-900/50 p-2 rounded-xl border border-dark-600/30">
+                       <span className="text-[10px] font-bold text-dark-400 ml-2">{data.length} Itens ✓</span>
+                       <button onClick={() => setData([])} className="p-1.5 hover:bg-red-500/10 text-dark-500 hover:text-red-500 rounded-lg transition-colors">
+                         <HiOutlineTrash className="w-4 h-4" />
+                       </button>
                     </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                        <span>Posição Horizontal Caixa (X)</span>
-                        <span className="text-brand-400">{settings.boxX}%</span>
-                      </label>
-                      <input type="range" min="0" max="100" value={settings.boxX} onChange={(e) => handleSettingChange('boxX', e.target.value)} className="w-full accent-brand-500" />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                        <span>Altura da Caixa</span>
-                        <span className="text-brand-400">{settings.boxHeight}%</span>
-                      </label>
-                      <input type="range" min="10" max="100" value={settings.boxHeight} onChange={(e) => handleSettingChange('boxHeight', e.target.value)} className="w-full accent-brand-500" />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                        <span>Posição Vertical Caixa (Y)</span>
-                        <span className="text-brand-400">{settings.boxY}%</span>
-                      </label>
-                      <input type="range" min="0" max="100" value={settings.boxY} onChange={(e) => handleSettingChange('boxY', e.target.value)} className="w-full accent-brand-500" />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between text-sm font-medium text-dark-200">
-                        <span>Arredondamento Caixa</span>
-                        <span className="text-brand-400">{settings.boxRadius}%</span>
-                      </label>
-                      <input type="range" min="0" max="50" value={settings.boxRadius} onChange={(e) => handleSettingChange('boxRadius', e.target.value)} className="w-full accent-brand-500" />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Novas Configurações */}
-              <div className="mt-8 pt-8 border-t border-dark-600/50 space-y-6">
-                <h3 className="text-md font-semibold text-white">Opções Adicionais</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Export Only QR */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-dark-200">Exportação</label>
-                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
-                      <button 
-                        onClick={() => setExportOnlyQR(false)}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${!exportOnlyQR ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        Comanda Completa
-                      </button>
-                      <button 
-                        onClick={() => setExportOnlyQR(true)}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${exportOnlyQR ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        Apenas Código
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Code Type */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-dark-200">Tipo de Código</label>
-                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
-                      <button 
-                        onClick={() => setCodeType('qr')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${codeType === 'qr' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        QR Code
-                      </button>
-                      <button 
-                        onClick={() => setCodeType('barcode')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${codeType === 'barcode' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        Código de Barra
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Data Source */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-dark-200">Origem do Dado</label>
-                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
-                      <button 
-                        onClick={() => setDataSource('link')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${dataSource === 'link' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        Link Cardápio
-                      </button>
-                      <button 
-                        onClick={() => setDataSource('controle')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${dataSource === 'controle' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        Controle
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Export Format */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-dark-200">Formato de Arquivo</label>
-                    <div className="flex bg-dark-900 rounded-lg p-1 border border-dark-600">
-                      <button 
-                        onClick={() => setExportFormat('pdf')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${exportFormat === 'pdf' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        PDF (.pdf)
-                      </button>
-                      <button 
-                        onClick={() => setExportFormat('zip')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded ${exportFormat === 'zip' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
-                      >
-                        ZIP (.png)
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
-
             </div>
 
-            {/* Action Button */}
-            <div className="flex justify-end">
+            {/* Step 2: Settings */}
+            <div className="glass-card p-8 border-t-2 border-t-brand-500/20">
+              <div className="flex items-center gap-3 mb-10">
+                <div className="w-10 h-10 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-400">
+                  <HiOutlineViewGrid className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-black text-white uppercase tracking-wider">02. Ajustes Visuais</h2>
+              </div>
+
+              {/* Page Dimensions */}
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">A. Dimensões do Cartão (cm)</h3>
+                  <button 
+                    onClick={() => { setPageWidth(4); setPageHeight(3); }}
+                    className="text-xs font-bold text-brand-400 hover:text-brand-300 transition-colors"
+                  >
+                    Resetar p/ 4x3cm
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs text-dark-400 font-medium ml-1">Largura</label>
+                    <input 
+                      type="number" step="0.1" value={pageWidth} 
+                      onChange={(e) => setPageWidth(Number(e.target.value))}
+                      className="w-full bg-dark-900/50 border border-dark-600 rounded-xl px-4 py-3 text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-dark-400 font-medium ml-1">Altura</label>
+                    <input 
+                      type="number" step="0.1" value={pageHeight} 
+                      onChange={(e) => setPageHeight(Number(e.target.value))}
+                      className="w-full bg-dark-900/50 border border-dark-600 rounded-xl px-4 py-3 text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Elements Positioning */}
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">B. Posicionamento de Elementos (%)</h3>
+                  <button 
+                    onClick={handleAutoCenter}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-bold transition-all border border-brand-500/20"
+                  >
+                    <HiOutlineRefresh className="w-3.5 h-3.5" />
+                    Auto-Centralizar
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                  {/* QR Code Group */}
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Código Principal</h4>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-dark-200">Tamanho do QR</span>
+                        <span className="text-brand-400">{settings.qrSize}%</span>
+                      </div>
+                      <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                          <span>Horizontal (X)</span>
+                          <span>{settings.qrX}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                          <span>Vertical (Y)</span>
+                          <span>{settings.qrY}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text Group */}
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Numeração / Texto</h4>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-dark-200">Tamanho da Fonte</span>
+                        <span className="text-brand-400">{settings.fontSize}%</span>
+                      </div>
+                      <input type="range" min="1" max="30" value={settings.fontSize} onChange={(e) => handleSettingChange('fontSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                          <span>Horizontal (X)</span>
+                          <span>{settings.textX}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value={settings.textX} onChange={(e) => handleSettingChange('textX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                          <span>Vertical (Y)</span>
+                          <span>{settings.textY}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Draw Box Feature */}
+                <div className="pt-6 border-t border-dark-600/50">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded bg-dark-700 border border-dark-600 flex items-center justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={settings.drawWhiteBox} 
+                          onChange={(e) => setSettings(p => ({...p, drawWhiteBox: e.target.checked}))}
+                          className="w-4 h-4 rounded-sm accent-brand-500 cursor-pointer"
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-white uppercase tracking-wider">Habilitar Fundo Branco de Contraste</span>
+                    </div>
+                  </div>
+
+                  {settings.drawWhiteBox && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-fade-in">
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-dark-200">Largura da Caixa</span>
+                            <span className="text-brand-400">{settings.boxWidth}%</span>
+                          </div>
+                          <input type="range" min="10" max="100" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-dark-200">Altura da Caixa</span>
+                            <span className="text-brand-400">{settings.boxHeight}%</span>
+                          </div>
+                          <input type="range" min="10" max="100" value={settings.boxHeight} onChange={(e) => handleSettingChange('boxHeight', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                        </div>
+                      </div>
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Posição X</span>
+                              <span>{settings.boxX}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.boxX} onChange={(e) => handleSettingChange('boxX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Posição Y</span>
+                              <span>{settings.boxY}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.boxY} onChange={(e) => handleSettingChange('boxY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-dark-200">Bordas Arredondadas</span>
+                            <span className="text-brand-400">{settings.boxRadius}%</span>
+                          </div>
+                          <input type="range" min="0" max="50" value={settings.boxRadius} onChange={(e) => handleSettingChange('boxRadius', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Export Options */}
+            <div className="glass-card p-8">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 font-bold">3</div>
+                <h2 className="text-xl font-bold text-white">Opções de Exportação</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Export Style */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Modo de Saída</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setExportOnlyQR(false)}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${!exportOnlyQR ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      Completa
+                    </button>
+                    <button 
+                      onClick={() => setExportOnlyQR(true)}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${exportOnlyQR ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      Apenas QR
+                    </button>
+                  </div>
+                </div>
+
+                {/* Code Format */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Tipo de Escaneável</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setCodeType('qr')}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${codeType === 'qr' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      QR Code
+                    </button>
+                    <button 
+                      onClick={() => setCodeType('barcode')}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${codeType === 'barcode' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      Cód. Barras
+                    </button>
+                  </div>
+                </div>
+
+                {/* Data Mapping */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Vincular Campo</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setDataSource('link')}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${dataSource === 'link' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      Link
+                    </button>
+                    <button 
+                      onClick={() => setDataSource('controle')}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${dataSource === 'controle' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      Código
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Format */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Formato Final</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setExportFormat('pdf')}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${exportFormat === 'pdf' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      PDF
+                    </button>
+                    <button 
+                      onClick={() => setExportFormat('zip')}
+                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${exportFormat === 'zip' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      ZIP (PNG)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex justify-between items-center bg-dark-800/80 p-6 rounded-2xl border border-dark-600/50 glass">
+              <div className="hidden md:block">
+                <p className="text-sm font-bold text-white tracking-wide">Pronto para gerar?</p>
+                <p className="text-xs text-dark-400">{data.length} comandas serão processadas em {exportFormat.toUpperCase()}</p>
+              </div>
               <button
                 onClick={handlePreGenerate}
                 disabled={isGenerating || (!template && !exportOnlyQR) || data.length === 0}
-                className="flex items-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-400 text-white rounded-xl font-semibold shadow-lg shadow-brand-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-brand-500 hover:bg-brand-400 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-brand-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-95"
               >
                 {isGenerating ? (
                   <>
                     <HiOutlineRefresh className="w-5 h-5 animate-spin" />
-                    Gerando...
+                    Processando...
                   </>
                 ) : (
                   <>
-                    <HiOutlineDownload className="w-5 h-5" />
-                    Gerar {exportFormat === 'pdf' ? 'PDF' : 'ZIP'} ({pageWidth} x {pageHeight} cm)
+                    <HiOutlineDownload className="w-6 h-6" />
+                    Gerar Arquivo
                   </>
                 )}
               </button>
@@ -800,33 +888,56 @@ export default function Comandas({ minimal = false }) {
 
           </div>
 
-          {/* Right Column - Preview */}
-          <div className="lg:col-span-1">
-            <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl sticky top-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Preview</h2>
-              <div className="bg-dark-900 rounded-xl p-4 flex items-center justify-center border border-dark-600/50">
-                {/* Hidden canvas used for generating the preview */}
+          {/* Right Column - Preview Stickiness */}
+          <div className="lg:col-span-4 lg:sticky lg:top-8 self-start">
+            <div className="glass-card p-6 overflow-hidden">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-white uppercase tracking-widest">Preview Real</h2>
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500/50"></span>
+                  <span className="w-2 h-2 rounded-full bg-yellow-500/50"></span>
+                  <span className="w-2 h-2 rounded-full bg-green-500/50"></span>
+                </div>
+              </div>
+
+              <div className="bg-dark-950 rounded-2xl p-8 flex items-center justify-center border border-dark-600/50 shadow-inner relative group">
+                {/* Visual Frame */}
+                <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent pointer-events-none rounded-2xl" />
+                
                 <canvas ref={canvasRef} className="hidden" />
                 
                 {previewDataUrl ? (
-                  <div className="relative group">
+                  <div className="relative animate-fade-in">
                     <img 
                       src={previewDataUrl} 
                       alt="Preview Comanda" 
-                      className="w-full h-auto max-w-[280px] rounded shadow-lg mx-auto"
+                      className="w-full h-auto max-w-[320px] rounded-sm shadow-2xl mx-auto border border-white/10 ring-1 ring-black/50"
                     />
-                    <div className="absolute inset-0 border-2 border-brand-500/50 rounded pointer-events-none" />
+                    <div className="absolute -inset-4 border border-brand-500/20 rounded-lg pointer-events-none group-hover:border-brand-500/40 transition-colors" />
                   </div>
                 ) : (
-                  <div style={{ aspectRatio: `${pageWidth}/${pageHeight}` }} className="w-full max-w-[280px] border-2 border-dashed border-dark-600 rounded flex flex-col items-center justify-center text-dark-400 p-6 text-center">
-                    <HiOutlinePhotograph className="w-8 h-8 mb-2 opacity-50" />
-                    <span className="text-sm">Faça o upload da imagem e planilha para ver o preview</span>
+                  <div style={{ aspectRatio: `${pageWidth}/${pageHeight}` }} className="w-full max-w-[320px] bg-dark-900/50 border-2 border-dashed border-dark-600 rounded-xl flex flex-col items-center justify-center text-dark-500 p-8 text-center transition-all group-hover:border-dark-500 shadow-xl">
+                    <HiOutlinePhotograph className="w-12 h-12 mb-4 opacity-20" />
+                    <p className="text-sm font-bold uppercase tracking-widest opacity-40">Aguardando Imagem e Dados</p>
                   </div>
                 )}
               </div>
-              <div className="mt-4 text-xs text-dark-400 text-center space-y-1">
-                <p>Preview da primeira comanda</p>
-                <p className="opacity-70">Dimensões finais: {pageWidth}cm x {pageHeight}cm</p>
+
+              <div className="mt-8 space-y-4">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-dark-400 font-medium">Largura Real</span>
+                  <span className="text-white font-bold">{pageWidth} cm</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-dark-400 font-medium">Altura Real</span>
+                  <span className="text-white font-bold">{pageHeight} cm</span>
+                </div>
+                <div className="pt-4 border-t border-dark-600/50">
+                  <div className="flex items-center gap-2 text-[10px] text-dark-300">
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+                    As dimensões seguem a proporção física especificada.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
