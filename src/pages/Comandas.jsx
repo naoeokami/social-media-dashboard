@@ -606,14 +606,29 @@ export default function Comandas({ minimal = false }) {
 
               {/* Page Dimensions */}
               <div className="mb-10">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
                   <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">A. Dimensões do Cartão (cm)</h3>
-                  <button 
-                    onClick={() => { setPageWidth(4); setPageHeight(3); }}
-                    className="text-xs font-bold text-brand-400 hover:text-brand-300 transition-colors"
-                  >
-                    Resetar p/ 4x3cm
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] text-dark-400 uppercase tracking-widest font-bold hidden xl:block">Padrões:</span>
+                    <button 
+                      onClick={() => { setPageWidth(6.5); setPageHeight(9.5); }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-dark-700/50 hover:bg-brand-500/20 text-brand-400 border border-dark-600/50 hover:border-brand-500/30 rounded-lg transition-all"
+                    >
+                      6.5 × 9.5
+                    </button>
+                    <button 
+                      onClick={() => { setPageWidth(8); setPageHeight(8); }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-dark-700/50 hover:bg-brand-500/20 text-brand-400 border border-dark-600/50 hover:border-brand-500/30 rounded-lg transition-all"
+                    >
+                      8 × 8
+                    </button>
+                    <button 
+                      onClick={() => { setPageWidth(4); setPageHeight(2.5); }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-dark-700/50 hover:bg-brand-500/20 text-brand-400 border border-dark-600/50 hover:border-brand-500/30 rounded-lg transition-all"
+                    >
+                      4 × 2.5
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
