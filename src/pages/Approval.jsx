@@ -17,6 +17,7 @@ import {
 import { FaInstagram, FaFacebook, FaLinkedin, FaEllipsisH } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import ImageCarousel from '../components/ImageCarousel';
+import { useState } from 'react';
 
 const platformIcons = {
   Instagram: FaInstagram,

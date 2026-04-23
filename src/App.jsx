@@ -14,9 +14,10 @@ import AgentChat from './pages/AgentChat';
 import Login from './pages/Login';
 import Comandas from './pages/Comandas';
 import { useApp } from './contexts/AppContext';
+import PostStatusModal from './components/PostStatusModal';
 
 export default function App() {
-  const { user, loadingUser } = useApp();
+  const { user, loadingUser, statusNotification, setStatusNotification } = useApp();
 
   if (loadingUser) {
     return (
@@ -54,6 +55,13 @@ export default function App() {
           </Route>
         )}
       </Routes>
+      
+      <PostStatusModal 
+        isOpen={!!statusNotification} 
+        onClose={() => setStatusNotification(null)}
+        postTitle={statusNotification?.post?.title || ''}
+        type={statusNotification?.type}
+      />
     </>
   );
 }

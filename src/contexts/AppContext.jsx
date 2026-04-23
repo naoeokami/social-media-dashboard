@@ -18,6 +18,7 @@ export function AppProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profile, setProfile] = useState({});
   const [apiKeys, setApiKeys] = useState({});
+  const [statusNotification, setStatusNotification] = useState(null);
   
   // Auth state
   const [user, setUser] = useState(null);
@@ -206,7 +207,20 @@ export function AppProvider({ children }) {
              }
 
              setPosts(prev => {
-                if (!prev.some(p => p.id === newPost.id)) return [newPost, ...prev];
+                const oldPost = prev.find(p => p.id === newPost.id);
+                
+                // Detect Status Changes for Global Notifications
+                const wasAprovacao = oldPost?.status === 'aprovacao';
+                
+                if (wasAprovacao) {
+                   if (newPost.status === 'agendado') {
+                      setStatusNotification({ post: newPost, type: 'approval' });
+                   } else if (newPost.status === 'producao') {
+                      setStatusNotification({ post: newPost, type: 'adjustment' });
+                   }
+                }
+
+                if (!oldPost) return [newPost, ...prev];
                 return prev.map(p => p.id === newPost.id ? newPost : p);
              });
            }
@@ -563,7 +577,8 @@ export function AppProvider({ children }) {
     schedules, addSchedule, updateSchedule, deleteSchedule,
     sidebarOpen, setSidebarOpen,
     profile, updateProfile,
-    apiKeys, updateApiKeys
+    apiKeys, updateApiKeys,
+    statusNotification, setStatusNotification
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
