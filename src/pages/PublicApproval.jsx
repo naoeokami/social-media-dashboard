@@ -214,7 +214,7 @@ export default function PublicApproval() {
           </div>
 
           {/* Post Media */}
-          <div className="aspect-square w-full bg-dark-900 relative">
+          <div className="aspect-[4/5] w-full bg-dark-900 relative">
             {(post.fileUrls?.length > 0) || post.fileUrl ? (
               <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
             ) : (

@@ -110,11 +110,11 @@ export default function Approval() {
 
             {/* Preview Media */}
             {(post.fileUrls?.length > 0) || post.fileUrl ? (
-               <div className="aspect-square w-full bg-dark-900 relative">
+               <div className="aspect-[4/5] w-full bg-dark-900 relative">
                  <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
                </div>
             ) : (
-              <div className="aspect-square bg-slate-800/30 flex items-center justify-center border-b border-white/5">
+              <div className="aspect-[4/5] bg-slate-800/30 flex items-center justify-center border-b border-white/5">
                 <div className="text-center opacity-30">
                   <HiOutlineDocumentText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{post.contentType || 'Sem Mídia'}</span>

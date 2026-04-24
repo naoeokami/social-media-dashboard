@@ -27,7 +27,7 @@ export default function ImageCarousel({ images }) {
             key={i}
             src={img}
             alt={`Slide ${i + 1}`}
-            className="w-full h-full object-contain flex-shrink-0"
+            className="w-full h-full object-cover flex-shrink-0"
           />
         ))}
       </div>
