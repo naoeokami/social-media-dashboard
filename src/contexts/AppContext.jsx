@@ -19,6 +19,8 @@ export function AppProvider({ children }) {
   const [profile, setProfile] = useState({});
   const [apiKeys, setApiKeys] = useState({});
   const [statusNotification, setStatusNotification] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [events, setEvents] = useState([]);
   
   // Auth state
   const [user, setUser] = useState(null);
@@ -57,7 +59,7 @@ export function AppProvider({ children }) {
 
     if (hasSupabaseConfig && loadingUser) return;
     if (hasSupabaseConfig && !user) {
-      setPosts([]); setTodos([]); setSwipeItems([]); setShortcuts([]); setProducts([]); setSegments([]); setSchedules([]);
+      setPosts([]); setTodos([]); setSwipeItems([]); setShortcuts([]); setProducts([]); setSegments([]); setSchedules([]); setNotes([]); setEvents([]);
       return;
     }
 
@@ -76,6 +78,10 @@ export function AppProvider({ children }) {
         if (localSchedules) setSchedules(JSON.parse(localSchedules));
         const localSwipe = localStorage.getItem('socialhub_swipe');
         if (localSwipe) setSwipeItems(JSON.parse(localSwipe));
+        const localNotes = localStorage.getItem('socialhub_notes');
+        if (localNotes) setNotes(JSON.parse(localNotes));
+        const localEvents = localStorage.getItem('socialhub_events');
+        if (localEvents) setEvents(JSON.parse(localEvents));
         return;
       }
 
@@ -180,6 +186,35 @@ export function AppProvider({ children }) {
         } catch (e) {
           const localSchedules = localStorage.getItem('socialhub_schedules');
           if (localSchedules) setSchedules(JSON.parse(localSchedules));
+        }
+
+        // Load notes and events from Supabase or localStorage
+        try {
+          const notesRes = await supabase.from('notes').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+          if (notesRes.data) {
+            setNotes(notesRes.data.map(n => ({ ...n, createdAt: n.created_at })));
+          } else {
+            const localNotes = localStorage.getItem('socialhub_notes');
+            if (localNotes) setNotes(JSON.parse(localNotes));
+          }
+
+          const eventsRes = await supabase.from('events').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+          if (eventsRes.data) {
+            setEvents(eventsRes.data.map(e => ({ 
+              ...e, 
+              startTime: e.start_time, 
+              endTime: e.end_time, 
+              createdAt: e.created_at 
+            })));
+          } else {
+            const localEvents = localStorage.getItem('socialhub_events');
+            if (localEvents) setEvents(JSON.parse(localEvents));
+          }
+        } catch (e) {
+          const localNotes = localStorage.getItem('socialhub_notes');
+          if (localNotes) setNotes(JSON.parse(localNotes));
+          const localEvents = localStorage.getItem('socialhub_events');
+          if (localEvents) setEvents(JSON.parse(localEvents));
         }
 
       } catch (error) {
@@ -556,6 +591,122 @@ export function AppProvider({ children }) {
     }
   };
 
+  // Notes CRUD
+  const addNote = async (note) => {
+    const newNote = { ...note, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    setNotes(prev => {
+      const updated = [newNote, ...prev];
+      localStorage.setItem('socialhub_notes', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const dbNote = { 
+        id: newNote.id,
+        user_id: user?.id,
+        title: newNote.title,
+        content: newNote.content,
+        date: newNote.date,
+        color: newNote.color,
+        created_at: newNote.createdAt 
+      };
+      const { error } = await supabase.from('notes').insert(dbNote);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase notes:", error);
+    }
+    return newNote;
+  };
+
+  const updateNote = async (id, data) => {
+    setNotes(prev => {
+      const updated = prev.map(n => n.id === id ? { ...n, ...data } : n);
+      localStorage.setItem('socialhub_notes', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const dbNote = { ...data };
+      delete dbNote.createdAt;
+      delete dbNote.id;
+      delete dbNote.user_id;
+
+      const { error } = await supabase.from('notes').update(dbNote).eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase update note:", error);
+    }
+  };
+
+  const deleteNote = async (id) => {
+    setNotes(prev => {
+      const updated = prev.filter(n => n.id !== id);
+      localStorage.setItem('socialhub_notes', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('notes').delete().eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase delete note:", error);
+    }
+  };
+
+  // Events CRUD
+  const addEvent = async (event) => {
+    const newEvent = { ...event, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    setEvents(prev => {
+      const updated = [newEvent, ...prev];
+      localStorage.setItem('socialhub_events', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const dbEvent = {
+        id: newEvent.id,
+        user_id: user?.id,
+        title: newEvent.title,
+        description: newEvent.description,
+        date: newEvent.date,
+        start_time: newEvent.startTime,
+        end_time: newEvent.endTime,
+        type: newEvent.type,
+        created_at: newEvent.createdAt
+      };
+      const { error } = await supabase.from('events').insert(dbEvent);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase events:", error);
+    }
+    return newEvent;
+  };
+
+  const updateEvent = async (id, data) => {
+    setEvents(prev => {
+      const updated = prev.map(e => e.id === id ? { ...e, ...data } : e);
+      localStorage.setItem('socialhub_events', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const dbEvent = { ...data };
+      if (dbEvent.startTime) {
+        dbEvent.start_time = dbEvent.startTime;
+        delete dbEvent.startTime;
+      }
+      if (dbEvent.endTime) {
+        dbEvent.end_time = dbEvent.endTime;
+        delete dbEvent.endTime;
+      }
+      delete dbEvent.createdAt;
+      delete dbEvent.id;
+      delete dbEvent.user_id;
+
+      const { error } = await supabase.from('events').update(dbEvent).eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase update event:", error);
+    }
+  };
+
+  const deleteEvent = async (id) => {
+    setEvents(prev => {
+      const updated = prev.filter(e => e.id !== id);
+      localStorage.setItem('socialhub_events', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('events').delete().eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase delete event:", error);
+    }
+  };
+
   const updateProfile = (data) => {
     setProfile(data);
     localStorage.setItem('socialhub_profile', JSON.stringify(data));
@@ -575,6 +726,8 @@ export function AppProvider({ children }) {
     products, addProduct, updateProduct, deleteProduct,
     segments, addSegment, deleteSegment,
     schedules, addSchedule, updateSchedule, deleteSchedule,
+    notes, addNote, updateNote, deleteNote,
+    events, addEvent, updateEvent, deleteEvent,
     sidebarOpen, setSidebarOpen,
     profile, updateProfile,
     apiKeys, updateApiKeys,

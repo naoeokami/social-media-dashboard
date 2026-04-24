@@ -84,14 +84,14 @@ export default function TopBar() {
 
       <div className="flex items-center gap-3">
         {/* Search */}
-        <div className="relative hidden md:block">
+        {/* <div className="relative hidden md:block">
           <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
           <input
             type="text"
             placeholder="Buscar..."
             className="pl-10 pr-4 py-2 bg-dark-700/50 border border-dark-600/50 rounded-xl text-sm text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 w-64 transition-all"
           />
-        </div>
+        </div> */}
 
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
