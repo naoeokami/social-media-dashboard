@@ -321,6 +321,10 @@ export function AppProvider({ children }) {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
     if (hasSupabaseConfig) {
       const dbPost = { ...data };
+      delete dbPost.calendarType;
+      delete dbPost.id;
+      delete dbPost.user_id;
+      delete dbPost.created_at;
       if (dbPost.budget === '') dbPost.budget = null;
       if (dbPost.date === '') dbPost.date = null;
       if (dbPost.time === '') dbPost.time = null;
@@ -626,6 +630,7 @@ export function AppProvider({ children }) {
       delete dbNote.createdAt;
       delete dbNote.id;
       delete dbNote.user_id;
+      delete dbNote.calendarType;
 
       const { error } = await supabase.from('notes').update(dbNote).eq('id', id);
       if (error && error.code !== '42P01') console.error("Erro no Supabase update note:", error);
@@ -689,6 +694,7 @@ export function AppProvider({ children }) {
       delete dbEvent.createdAt;
       delete dbEvent.id;
       delete dbEvent.user_id;
+      delete dbEvent.calendarType;
 
       const { error } = await supabase.from('events').update(dbEvent).eq('id', id);
       if (error && error.code !== '42P01') console.error("Erro no Supabase update event:", error);
