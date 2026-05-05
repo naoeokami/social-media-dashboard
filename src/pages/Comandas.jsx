@@ -33,6 +33,7 @@ export default function Comandas({ minimal = false }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [docName, setDocName] = useState('');
+  const [rangeInput, setRangeInput] = useState('');
   const [pageWidth, setPageWidth] = useState(6.5);
   const [pageHeight, setPageHeight] = useState(9.5);
   const canvasRef = useRef(null);
@@ -133,6 +134,7 @@ export default function Comandas({ minimal = false }) {
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+    e.target.value = null;
   };
 
   const handleExcelUpload = (e) => {
@@ -192,6 +194,7 @@ export default function Comandas({ minimal = false }) {
       }
     };
     reader.readAsBinaryString(file);
+    e.target.value = null;
   };
 
   // Helper to draw a single card
@@ -326,6 +329,7 @@ export default function Comandas({ minimal = false }) {
       return;
     }
     setDocName('');
+    setRangeInput('');
     setIsModalOpen(true);
   };
 
@@ -333,6 +337,38 @@ export default function Comandas({ minimal = false }) {
     if (e) e.preventDefault();
     if (!docName.trim()) {
       toast.error('Por favor, insira um nome para o lote.');
+      return;
+    }
+
+    const parseRange = (input) => {
+      if (!input.trim()) return null;
+      const parts = input.split(',').map(p => p.trim());
+      const allowedNumbers = new Set();
+      
+      parts.forEach(part => {
+        if (part.includes('-')) {
+          const [start, end] = part.split('-').map(Number);
+          if (!isNaN(start) && !isNaN(end)) {
+            for (let i = start; i <= end; i++) {
+              allowedNumbers.add(i);
+            }
+          }
+        } else {
+          const num = Number(part);
+          if (!isNaN(num)) allowedNumbers.add(num);
+        }
+      });
+      
+      return allowedNumbers;
+    };
+
+    const allowedNumbers = parseRange(rangeInput);
+    const itemsToGenerate = allowedNumbers 
+      ? data.filter(item => allowedNumbers.has(Number(item.numero))) 
+      : data;
+
+    if (itemsToGenerate.length === 0) {
+      toast.error("Nenhuma comanda encontrada para os números informados.");
       return;
     }
     
@@ -355,11 +391,11 @@ export default function Comandas({ minimal = false }) {
         hiddenCanvas.height = pageHeight * 100;
         const ctx = hiddenCanvas.getContext('2d');
 
-        for (let i = 0; i < data.length; i++) {
+        for (let i = 0; i < itemsToGenerate.length; i++) {
           if (i > 0) pdf.addPage([pageWidth, pageHeight], orientation);
           ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
           
-          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
+          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, itemsToGenerate[i], settings);
           
           const cardDataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
           pdf.addImage(cardDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
@@ -408,13 +444,13 @@ export default function Comandas({ minimal = false }) {
         hiddenCanvas.height = pageHeight * 100;
         const ctx = hiddenCanvas.getContext('2d');
 
-        for (let i = 0; i < data.length; i++) {
+        for (let i = 0; i < itemsToGenerate.length; i++) {
           ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, data[i], settings);
+          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, itemsToGenerate[i], settings);
           
           const cardDataUrl = hiddenCanvas.toDataURL('image/png');
           const base64Data = cardDataUrl.split(',')[1];
-          const filename = `comanda_${data[i].numero || (i+1)}.png`;
+          const filename = `comanda_${itemsToGenerate[i].numero || (i+1)}.png`;
           zip.file(filename, base64Data, { base64: true });
           
           if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
@@ -1037,20 +1073,33 @@ export default function Comandas({ minimal = false }) {
               <HiOutlineX className="w-6 h-6" />
             </button>
             <h3 className="text-xl font-bold text-white mb-2">
-              Nome do Lote
+              Opções de Geração
             </h3>
             <p className="text-dark-300 text-sm mb-6">
-              Dê um nome para identificar este pacote de comandas no sistema. (ex: Evento Rock, Sábado)
+              Defina o nome do lote e os números que deseja gerar.
             </p>
             <form onSubmit={handleGeneratePDF}>
-              <input
-                type="text"
-                value={docName}
-                onChange={(e) => setDocName(e.target.value)}
-                placeholder="Digite o nome..."
-                className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all mb-6"
-                autoFocus
-              />
+              <div className="mb-4">
+                <label className="text-xs text-dark-300 font-bold mb-2 block">Nome do Lote *</label>
+                <input
+                  type="text"
+                  value={docName}
+                  onChange={(e) => setDocName(e.target.value)}
+                  placeholder="Ex: Evento Rock, Sábado"
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                  autoFocus
+                />
+              </div>
+              <div className="mb-6">
+                <label className="text-xs text-dark-300 font-bold mb-2 block">Quais números gerar? (Opcional)</label>
+                <input
+                  type="text"
+                  value={rangeInput}
+                  onChange={(e) => setRangeInput(e.target.value)}
+                  placeholder="Ex: 1-20, 25, 45 (Deixe em branco para todos)"
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                />
+              </div>
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
