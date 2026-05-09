@@ -181,70 +181,181 @@ export default function PublicApproval() {
       {/* Main Content */}
       <main className="flex-1 lg:ml-[320px] relative min-h-screen bg-dark-900 flex flex-col items-center py-10 px-4">
         {/* Post Preview Container */}
-        <div className="w-full max-w-[500px] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24">
-          {/* Post Header */}
-          <div className="p-4 flex items-center justify-between border-b border-slate-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[2px]">
-                <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[2px]">
-                  <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">G3</span>
+        {(() => {
+          const isStory = post.contentType === 'Story';
+          const isReels = post.contentType === 'Reels';
+          
+          if (isStory) {
+            return (
+              <div className="w-full max-w-[360px] aspect-[9/16] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24 relative flex flex-col">
+                {/* Story Media */}
+                <div className="absolute inset-0 z-0">
+                  {(post.fileUrls?.length > 0) || post.fileUrl ? (
+                    <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-3 bg-dark-900">
+                      <HiOutlineDocumentText className="w-16 h-16 opacity-20" />
+                      <span className="text-xs font-medium uppercase tracking-widest opacity-40">Sem Mídia</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Story Top Overlay */}
+                <div className="absolute top-0 left-0 w-full p-4 bg-gradient-to-b from-black/70 to-transparent z-10 flex items-center gap-3">
+                  <div className="flex-1 flex gap-1 mb-2 absolute top-2 left-4 right-4">
+                    <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+                       <div className="h-full bg-white w-full rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center mt-3">
+                    <span className="text-[10px] font-bold text-white">G3</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-xs font-bold text-white shadow-sm">g3softecnologia</span>
+                    <span className="text-xs text-white/70">1h</span>
+                  </div>
+                  <div className="flex-1"></div>
+                  <FaEllipsisH className="text-white w-4 h-4 mt-3 drop-shadow-md" />
+                </div>
+
+                {/* Story Bottom Overlay */}
+                <div className="absolute bottom-0 left-0 w-full p-4 z-10 flex items-center gap-3">
+                  <div className="flex-1 border border-white/40 rounded-full px-4 py-2 bg-black/20 backdrop-blur-sm">
+                    <span className="text-sm text-white/80">Enviar mensagem...</span>
+                  </div>
+                  <HiOutlineHeart className="w-7 h-7 text-white drop-shadow-md" />
+                  <HiOutlinePaperAirplane className="w-6 h-6 text-white drop-shadow-md rotate-90" />
+                </div>
+              </div>
+            );
+          }
+
+          if (isReels) {
+            return (
+              <div className="w-full max-w-[360px] aspect-[9/16] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24 relative flex flex-col">
+                {/* Reels Media */}
+                <div className="absolute inset-0 z-0">
+                  {(post.fileUrls?.length > 0) || post.fileUrl ? (
+                    <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-3 bg-dark-900">
+                      <HiOutlineDocumentText className="w-16 h-16 opacity-20" />
+                      <span className="text-xs font-medium uppercase tracking-widest opacity-40">Sem Mídia</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reels Header Overlay */}
+                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10">
+                   <span className="text-white font-bold text-lg drop-shadow-md">Reels</span>
+                </div>
+
+                {/* Reels Right Actions */}
+                <div className="absolute bottom-6 right-2 flex flex-col items-center gap-5 z-10">
+                  <div className="flex flex-col items-center gap-1">
+                    <HiOutlineHeart className="w-8 h-8 text-white drop-shadow-md" />
+                    <span className="text-white text-xs drop-shadow-md">1.2k</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <HiOutlineChat className="w-8 h-8 text-white drop-shadow-md" />
+                    <span className="text-white text-xs drop-shadow-md">45</span>
+                  </div>
+                  <HiOutlinePaperAirplane className="w-7 h-7 text-white drop-shadow-md -rotate-12" />
+                  <FaEllipsisH className="w-5 h-5 text-white drop-shadow-md mt-2" />
+                  <div className="w-8 h-8 rounded-md border-2 border-white overflow-hidden mt-4 flex items-center justify-center bg-slate-800">
+                     <span className="text-[8px] font-bold text-white">AUDIO</span>
+                  </div>
+                </div>
+
+                {/* Reels Bottom Info */}
+                <div className="absolute bottom-0 left-0 w-[calc(100%-60px)] p-4 z-10 bg-gradient-to-t from-black/80 to-transparent">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-white">G3</span>
+                    </div>
+                    <span className="text-sm font-bold text-white drop-shadow-md">g3softecnologia</span>
+                    <button className="border border-white text-white text-xs px-2 py-0.5 rounded-md ml-2 drop-shadow-md bg-transparent">Seguir</button>
+                  </div>
+                  <div className="text-sm text-white drop-shadow-md line-clamp-2 mb-2 leading-tight">
+                    {post.caption}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-white drop-shadow-md bg-black/30 w-max px-2 py-1 rounded-full backdrop-blur-sm">
+                    <span>🎵</span>
+                    <span>Áudio original - g3softecnologia</span>
                   </div>
                 </div>
               </div>
-              <div>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-white">g3softecnologia</span>
-                  <HiBadgeCheck className="w-4 h-4 text-blue-500" />
+            );
+          }
+
+          // Default Feed Layout
+          return (
+            <div className="w-full max-w-[500px] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24">
+              {/* Post Header */}
+              <div className="p-4 flex items-center justify-between border-b border-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[2px]">
+                    <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[2px]">
+                      <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
+                        <span className="text-xs font-bold text-white">G3</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-bold text-white">g3softecnologia</span>
+                      <HiBadgeCheck className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Publicidade</div>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Publicidade</div>
+                <div className="flex items-center gap-4">
+                   <div className="flex gap-1.5">
+                      {post.platforms?.map(platform => {
+                        const Icon = platformIcons[platform];
+                        return Icon ? (
+                          <Icon key={platform} className="w-4 h-4 opacity-40 hover:opacity-100 transition-opacity" style={{ color: platformColors[platform] }} />
+                        ) : null;
+                      })}
+                   </div>
+                   <FaEllipsisH className="text-slate-600 w-4 h-4 cursor-pointer" />
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-               <div className="flex gap-1.5">
-                  {post.platforms?.map(platform => {
-                    const Icon = platformIcons[platform];
-                    return Icon ? (
-                      <Icon key={platform} className="w-4 h-4 opacity-40 hover:opacity-100 transition-opacity" style={{ color: platformColors[platform] }} />
-                    ) : null;
-                  })}
-               </div>
-               <FaEllipsisH className="text-slate-600 w-4 h-4 cursor-pointer" />
-            </div>
-          </div>
 
-          {/* Post Media */}
-          <div className="aspect-[4/5] w-full bg-dark-900 relative">
-            {(post.fileUrls?.length > 0) || post.fileUrl ? (
-              <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-3">
-                <HiOutlineDocumentText className="w-16 h-16 opacity-20" />
-                <span className="text-xs font-medium uppercase tracking-widest opacity-40">Sem Mídia</span>
+              {/* Post Media */}
+              <div className="aspect-[4/5] w-full bg-dark-900 relative">
+                {(post.fileUrls?.length > 0) || post.fileUrl ? (
+                  <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-3">
+                    <HiOutlineDocumentText className="w-16 h-16 opacity-20" />
+                    <span className="text-xs font-medium uppercase tracking-widest opacity-40">Sem Mídia</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Post Actions */}
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <HiOutlineHeart className="w-7 h-7 text-slate-300 hover:text-red-500 transition-colors cursor-pointer" />
-                <HiOutlineChat className="w-[1.65rem] h-[1.65rem] text-slate-300 hover:text-slate-100 transition-colors cursor-pointer" />
-                <HiOutlinePaperAirplane className="w-6 h-6 text-slate-300 hover:text-slate-100 transition-colors cursor-pointer rotate-90" />
-              </div>
-              <HiOutlineBookmark className="w-6 h-6 text-slate-300 hover:text-slate-100 transition-colors cursor-pointer" />
-            </div>
+              {/* Post Actions */}
+              <div className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <HiOutlineHeart className="w-7 h-7 text-slate-300 hover:text-red-500 transition-colors cursor-pointer" />
+                    <HiOutlineChat className="w-[1.65rem] h-[1.65rem] text-slate-300 hover:text-slate-100 transition-colors cursor-pointer" />
+                    <HiOutlinePaperAirplane className="w-6 h-6 text-slate-300 hover:text-slate-100 transition-colors cursor-pointer rotate-90" />
+                  </div>
+                  <HiOutlineBookmark className="w-6 h-6 text-slate-300 hover:text-slate-100 transition-colors cursor-pointer" />
+                </div>
 
-            {/* Post Caption */}
-            <div className="space-y-2">
-              <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                <span className="font-bold text-white mr-2">g3softecnologia</span>
-                {post.caption}
+                {/* Post Caption */}
+                <div className="space-y-2">
+                  <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                    <span className="font-bold text-white mr-2">g3softecnologia</span>
+                    {post.caption}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Floating Actions */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 lg:left-[calc(50%+160px)] flex items-center gap-4 z-30">

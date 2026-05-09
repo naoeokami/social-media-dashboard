@@ -16,19 +16,41 @@ export default function ImageCarousel({ images }) {
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
+  const isVideo = (url) => {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.includes('.mp4') || 
+           lowerUrl.includes('.webm') || 
+           lowerUrl.includes('.ogg') || 
+           lowerUrl.includes('.mov');
+  };
+
   return (
     <div className="relative w-full h-full group overflow-hidden bg-black/10" style={{ minHeight: '100%' }}>
       <div 
         className="flex w-full h-full transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
-        {images.map((img, i) => (
-          <img
-            key={i}
-            src={img}
-            alt={`Slide ${i + 1}`}
-            className="w-full h-full object-cover flex-shrink-0"
-          />
+        {images.map((mediaUrl, i) => (
+          <div key={i} className="w-full h-full flex-shrink-0 flex items-center justify-center bg-black">
+            {isVideo(mediaUrl) ? (
+              <video
+                src={mediaUrl}
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+              />
+            ) : (
+              <img
+                src={mediaUrl}
+                alt={`Slide ${i + 1}`}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
         ))}
       </div>
       

@@ -47,6 +47,9 @@ export default function Comandas({ minimal = false }) {
     textY: 80,
     fontSize: 6,
     textColor: '#000000',
+    fontFamily: 'Inter',
+    fontWeight: 'bold',
+    digitCount: 3,
     drawWhiteBox: true,
     boxWidth: 62,
     boxX: 50,
@@ -175,8 +178,8 @@ export default function Comandas({ minimal = false }) {
 
           if ((link && String(link).trim() !== '') || (formattedControle && String(formattedControle).trim() !== '')) {
             const numero = codigo !== undefined && codigo !== null 
-              ? String(codigo).padStart(3, '0') 
-              : String(validData.length + 1).padStart(3, '0');
+              ? String(codigo) 
+              : String(validData.length + 1);
               
             validData.push({ numero, link, controle: formattedControle });
           }
@@ -292,13 +295,17 @@ export default function Comandas({ minimal = false }) {
 
     // 4. Draw Text (Always drawn now, even if exportOnlyQR is true)
     if (itemData && itemData.numero) {
+      const displayNumero = !isNaN(itemData.numero) 
+        ? String(itemData.numero).padStart(currentSettings.digitCount, '0') 
+        : itemData.numero;
+
       ctx.fillStyle = currentSettings.textColor;
-      ctx.font = `bold ${fontPx}px Inter, sans-serif`;
+      ctx.font = `${currentSettings.fontWeight} ${fontPx}px ${currentSettings.fontFamily}, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const textXPx = (currentSettings.textX / 100) * canvasWidth;
       const textYPx = (currentSettings.textY / 100) * canvasHeight;
-      ctx.fillText(itemData.numero, textXPx, textYPx);
+      ctx.fillText(displayNumero, textXPx, textYPx);
     }
   };
 
@@ -450,7 +457,10 @@ export default function Comandas({ minimal = false }) {
           
           const cardDataUrl = hiddenCanvas.toDataURL('image/png');
           const base64Data = cardDataUrl.split(',')[1];
-          const filename = `comanda_${itemsToGenerate[i].numero || (i+1)}.png`;
+          const displayNumero = !isNaN(itemsToGenerate[i].numero) 
+            ? String(itemsToGenerate[i].numero).padStart(settings.digitCount, '0') 
+            : itemsToGenerate[i].numero;
+          const filename = `comanda_${displayNumero || (i+1)}.png`;
           zip.file(filename, base64Data, { base64: true });
           
           if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
@@ -471,7 +481,7 @@ export default function Comandas({ minimal = false }) {
   };
 
   const handleSettingChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: Number(value) }));
+    setSettings(prev => ({ ...prev, [key]: (key === 'textColor' || key === 'fontFamily' || key === 'fontWeight') ? value : Number(value) }));
   };
 
   const handleAutoCenter = () => {
@@ -756,6 +766,73 @@ export default function Comandas({ minimal = false }) {
                           <span>{settings.textY}%</span>
                         </div>
                         <input type="range" min="0" max="100" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-dark-400 uppercase">Fonte</label>
+                          <select 
+                            value={settings.fontFamily} 
+                            onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
+                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-500"
+                          >
+                            <option value="Inter">Inter</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Outfit">Outfit</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-dark-400 uppercase">Estilo</label>
+                          <select 
+                            value={settings.fontWeight} 
+                            onChange={(e) => handleSettingChange('fontWeight', e.target.value)}
+                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-500"
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="bold">Negrito</option>
+                            <option value="italic">Itálico</option>
+                            <option value="bold italic">Negrito Itálico</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-dark-400 uppercase">Dígitos (Numeração)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button 
+                            onClick={() => handleSettingChange('digitCount', 2)}
+                            className={`py-2 px-3 text-[10px] font-bold rounded-lg border transition-all ${settings.digitCount === 2 ? 'bg-brand-500 text-white border-brand-400' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                          >
+                            2 Dígitos (01)
+                          </button>
+                          <button 
+                            onClick={() => handleSettingChange('digitCount', 3)}
+                            className={`py-2 px-3 text-[10px] font-bold rounded-lg border transition-all ${settings.digitCount === 3 ? 'bg-brand-500 text-white border-brand-400' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                          >
+                            3 Dígitos (001)
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-dark-400 uppercase">Cor do Texto</label>
+                        <div className="flex gap-3">
+                          <input 
+                            type="color" 
+                            value={settings.textColor} 
+                            onChange={(e) => handleSettingChange('textColor', e.target.value)}
+                            className="w-10 h-10 rounded-lg bg-dark-900 border border-dark-600 p-1 cursor-pointer"
+                          />
+                          <input 
+                            type="text" 
+                            value={settings.textColor} 
+                            onChange={(e) => handleSettingChange('textColor', e.target.value)}
+                            className="flex-1 bg-dark-900/50 border border-dark-600 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand-500"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
