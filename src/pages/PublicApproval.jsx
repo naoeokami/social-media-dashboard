@@ -200,19 +200,23 @@ export default function PublicApproval() {
                   )}
                 </div>
                 
+                {/* Story Top/Bottom Gradient Overlay */}
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/60 to-transparent z-[5] pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/60 to-transparent z-[5] pointer-events-none"></div>
+                
                 {/* Story Top Overlay */}
-                <div className="absolute top-0 left-0 w-full p-4 bg-gradient-to-b from-black/70 to-transparent z-10 flex items-center gap-3">
+                <div className="absolute top-0 left-0 w-full p-4 z-10 flex items-center gap-3">
                   <div className="flex-1 flex gap-1 mb-2 absolute top-2 left-4 right-4">
                     <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
                        <div className="h-full bg-white w-full rounded-full"></div>
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center mt-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center mt-3 shadow-md">
                     <span className="text-[10px] font-bold text-white">G3</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-3">
+                  <div className="flex items-center gap-2 mt-3 drop-shadow-md">
                     <span className="text-xs font-bold text-white shadow-sm">g3softecnologia</span>
-                    <span className="text-xs text-white/70">1h</span>
+                    <span className="text-xs text-white/90 font-medium">1h</span>
                   </div>
                   <div className="flex-1"></div>
                   <FaEllipsisH className="text-white w-4 h-4 mt-3 drop-shadow-md" />
@@ -220,8 +224,8 @@ export default function PublicApproval() {
 
                 {/* Story Bottom Overlay */}
                 <div className="absolute bottom-0 left-0 w-full p-4 z-10 flex items-center gap-3">
-                  <div className="flex-1 border border-white/40 rounded-full px-4 py-2 bg-black/20 backdrop-blur-sm">
-                    <span className="text-sm text-white/80">Enviar mensagem...</span>
+                  <div className="flex-1 border border-white/40 rounded-full px-4 py-2 bg-black/20 backdrop-blur-sm shadow-md">
+                    <span className="text-sm text-white/90 drop-shadow-sm">Enviar mensagem...</span>
                   </div>
                   <HiOutlineHeart className="w-7 h-7 text-white drop-shadow-md" />
                   <HiOutlinePaperAirplane className="w-6 h-6 text-white drop-shadow-md rotate-90" />
@@ -245,6 +249,10 @@ export default function PublicApproval() {
                   )}
                 </div>
 
+                {/* Reels Top/Bottom Gradient Overlay */}
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/50 to-transparent z-[5] pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-full h-64 bg-gradient-to-t from-black/70 to-transparent z-[5] pointer-events-none"></div>
+
                 {/* Reels Header Overlay */}
                 <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10">
                    <span className="text-white font-bold text-lg drop-shadow-md">Reels</span>
@@ -253,22 +261,22 @@ export default function PublicApproval() {
                 {/* Reels Right Actions */}
                 <div className="absolute bottom-6 right-2 flex flex-col items-center gap-5 z-10">
                   <div className="flex flex-col items-center gap-1">
-                    <HiOutlineHeart className="w-8 h-8 text-white drop-shadow-md" />
-                    <span className="text-white text-xs drop-shadow-md">1.2k</span>
+                    <HiOutlineHeart className="w-8 h-8 text-white drop-shadow-md hover:text-red-500 transition-colors cursor-pointer" />
+                    <span className="text-white text-xs drop-shadow-md font-medium">1.2k</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <HiOutlineChat className="w-8 h-8 text-white drop-shadow-md" />
-                    <span className="text-white text-xs drop-shadow-md">45</span>
+                    <HiOutlineChat className="w-8 h-8 text-white drop-shadow-md hover:text-slate-300 transition-colors cursor-pointer" />
+                    <span className="text-white text-xs drop-shadow-md font-medium">45</span>
                   </div>
-                  <HiOutlinePaperAirplane className="w-7 h-7 text-white drop-shadow-md -rotate-12" />
-                  <FaEllipsisH className="w-5 h-5 text-white drop-shadow-md mt-2" />
-                  <div className="w-8 h-8 rounded-md border-2 border-white overflow-hidden mt-4 flex items-center justify-center bg-slate-800">
+                  <HiOutlinePaperAirplane className="w-7 h-7 text-white drop-shadow-md hover:text-slate-300 transition-colors cursor-pointer rotate-90" />
+                  <FaEllipsisH className="w-5 h-5 text-white drop-shadow-md mt-2 cursor-pointer hover:text-slate-300 transition-colors" />
+                  <div className="w-8 h-8 rounded-md border-2 border-white overflow-hidden mt-4 flex items-center justify-center bg-slate-800 shadow-md">
                      <span className="text-[8px] font-bold text-white">AUDIO</span>
                   </div>
                 </div>
 
                 {/* Reels Bottom Info */}
-                <div className="absolute bottom-0 left-0 w-[calc(100%-60px)] p-4 z-10 bg-gradient-to-t from-black/80 to-transparent">
+                <div className="absolute bottom-0 left-0 w-[calc(100%-60px)] p-4 z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center">
                       <span className="text-[10px] font-bold text-white">G3</span>
