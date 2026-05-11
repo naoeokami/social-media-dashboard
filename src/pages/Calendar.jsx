@@ -288,15 +288,20 @@ export default function Calendar() {
                     </div>
 
                     <div className="space-y-1">
-                      {dayItems.slice(0, view === 'week' ? 15 : 4).map(item => (
-                        <div
-                          key={item.id}
-                          onClick={(e) => handleEditItem(item, e)}
-                          className="group relative flex items-center gap-1 px-1.5 py-1.5 rounded-md text-xs transition-all hover:bg-dark-700/50 cursor-pointer"
-                          style={{ borderLeft: `2px solid ${getStatusColor(item)}` }}
-                        >
-                          <span className="truncate flex-1 flex items-center gap-1 text-dark-100">
-                            {getItemIcon(item)}
+                      {dayItems.slice(0, view === 'week' ? 15 : 4).map(item => {
+                        const itemColor = getStatusColor(item);
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={(e) => handleEditItem(item, e)}
+                            className="group relative flex items-center gap-1.5 px-2 py-1.5 mb-1 rounded-md text-xs transition-all hover:brightness-125 cursor-pointer"
+                            style={{ 
+                              borderLeft: `4px solid ${itemColor}`,
+                              backgroundColor: `${itemColor}20` // 20 in hex is ~12.5% opacity
+                            }}
+                          >
+                            <span className="truncate flex-1 flex items-center gap-1 text-dark-100 font-medium">
+                              {getItemIcon(item)}
                             {item.calendarType === 'event' && <span className="text-[10px] font-bold opacity-70">{item.startTime}</span>}
                             {item.title}
                           </span>
@@ -317,7 +322,8 @@ export default function Calendar() {
                             </button>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                       {dayItems.length > (view === 'week' ? 15 : 4) && (
                         <span className="text-[10px] text-brand-400 px-1.5">+{dayItems.length - (view === 'week' ? 15 : 4)} mais</span>
                       )}
