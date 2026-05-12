@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { fetchAllMetrics } from '../services/apiService';
 // import { mockMetrics } from '../data/mockData';
@@ -13,6 +13,13 @@ import {
   HiOutlineExternalLink,
 } from 'react-icons/hi';
 import { FaInstagram, FaFacebook, FaLinkedin } from 'react-icons/fa';
+import { 
+  startOfWeek, 
+  endOfWeek, 
+  isWithinInterval, 
+  isSameWeek,
+  parseISO 
+} from 'date-fns';
 
 const platformIcons = {
   instagram: FaInstagram,
@@ -158,6 +165,27 @@ export default function Dashboard() {
   const [metricsData, setMetricsData] = useState([]);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
 
+  // Weekly Stats Calculation
+  const weeklyStats = useMemo(() => {
+    const now = new Date();
+
+    const weeklyPosts = posts.filter(post => {
+      if (!post.date) return false;
+      try {
+        const postDate = parseISO(post.date);
+        return isSameWeek(postDate, now, { weekStartsOn: 0 });
+      } catch (e) {
+        return false;
+      }
+    });
+
+    return {
+      agendados: weeklyPosts.filter(p => p.status === 'agendado').length,
+      publicados: weeklyPosts.filter(p => p.status === 'postado').length,
+      aguardando: weeklyPosts.filter(p => p.status === 'aprovacao' || p.status === 'producao' || p.status === 'ideia').length
+    };
+  }, [posts]);
+
   /*
   // Em desenvolvimento
   useEffect(() => {
@@ -248,15 +276,15 @@ export default function Dashboard() {
           <h3 className="font-semibold text-white text-sm mb-3">Resumo da Semana</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold gradient-text">{posts.filter(p => p.status === 'agendado').length}</p>
+              <p className="text-2xl font-bold gradient-text">{weeklyStats.agendados}</p>
               <p className="text-xs text-dark-400 mt-1">Posts Agendados</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold text-success">{posts.filter(p => p.status === 'publicado').length}</p>
+              <p className="text-2xl font-bold text-success">{weeklyStats.publicados}</p>
               <p className="text-xs text-dark-400 mt-1">Publicados</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-dark-700/30">
-              <p className="text-2xl font-bold text-warning">{posts.filter(p => p.status === 'aprovacao' || p.status === 'producao').length}</p>
+              <p className="text-2xl font-bold text-warning">{weeklyStats.aguardando}</p>
               <p className="text-xs text-dark-400 mt-1">Aguardando</p>
             </div>
             {/* <div className="text-center p-4 rounded-xl bg-dark-700/30">

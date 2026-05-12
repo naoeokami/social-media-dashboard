@@ -77,7 +77,7 @@ export const funnelSegments = [
 ];
 
 export const tools = [
-  'CapCut', 'Photoshop', 'Figma', 'Canva', 'Premiere', 'After Effects', 'InShot', 'Outro'
+  'Davince Resolve', 'Photoshop', 'Figma', 'Canva', 'Premiere', 'After Effects', 'Outro'
 ];
 
 export const postStatuses = [
