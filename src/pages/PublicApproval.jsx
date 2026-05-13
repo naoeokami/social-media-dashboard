@@ -375,7 +375,7 @@ export default function PublicApproval() {
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="O que precisa ser alterado?"
                 rows={3}
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-warning/50 mb-4"
+                className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-warning/50 mb-4 resize-y min-h-[80px]"
               />
               <div className="flex gap-3">
                 <button 

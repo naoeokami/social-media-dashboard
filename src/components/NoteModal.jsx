@@ -70,7 +70,7 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote, initia
               value={form.content}
               onChange={e => setForm({ ...form, content: e.target.value })}
               rows={4}
-              className="w-full px-4 py-2 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm resize-none"
+              className="w-full px-4 py-2 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm resize-y min-h-[100px]"
             />
           </div>
 

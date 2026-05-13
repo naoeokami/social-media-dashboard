@@ -214,7 +214,7 @@ export default function Products() {
                   onChange={e => setNewProduct({...newProduct, description: e.target.value})}
                   placeholder="Breve descrição do produto..."
                   rows={3}
-                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500"
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-500 resize-y min-h-[80px]"
                 />
               </div>
 

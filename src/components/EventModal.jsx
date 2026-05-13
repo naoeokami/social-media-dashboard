@@ -118,7 +118,7 @@ export default function EventModal({ isOpen, onClose, onSave, editingEvent, init
               value={form.description}
               onChange={e => setForm({ ...form, description: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm resize-none"
+              className="w-full px-4 py-2 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm resize-y min-h-[80px]"
               placeholder="Detalhes do agendamento..."
             />
           </div>

@@ -216,7 +216,7 @@ export default function Schedule() {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all shadow-inner resize-none h-28 custom-scrollbar"
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all shadow-inner resize-y min-h-[112px] custom-scrollbar"
                   placeholder="Detalhes adicionais, links, ou notas importantes..."
                 />
               </div>
