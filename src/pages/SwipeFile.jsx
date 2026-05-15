@@ -46,94 +46,97 @@ export default function SwipeFile() {
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
-          <div className="relative flex-1">
-            <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+        <div className="flex items-center gap-3 flex-1 max-w-xl">
+          <div className="relative flex-1 group">
+            <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar referências..."
-              className="w-full pl-10 pr-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
             />
           </div>
-          <div className="relative">
+          <div className="relative group">
             <select
               value={filterCategory}
               onChange={e => setFilterCategory(e.target.value)}
-              className="pl-9 pr-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500/50 appearance-none cursor-pointer transition-all"
+              className="pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 appearance-none cursor-pointer transition-all"
             >
-              <option value="" className="bg-dark-800">Todas</option>
+              <option value="" className="bg-dark-800">Todas as Categorias</option>
               {swipeCategories.map(cat => (
                 <option key={cat} value={cat} className="bg-dark-800">{cat}</option>
               ))}
             </select>
-            <HiOutlineFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
+            <HiOutlineFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 pointer-events-none transition-colors" />
           </div>
         </div>
 
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2.5 gradient-brand rounded-xl text-white text-sm font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all"
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-semibold transition-all duration-300 ${showForm ? 'bg-dark-700 hover:bg-dark-600' : 'gradient-brand hover:shadow-[0_0_20px_rgba(var(--brand-500),0.3)] hover:scale-[1.02]'}`}
         >
-          {showForm ? <HiX className="w-4 h-4" /> : <HiOutlinePlus className="w-4 h-4" />}
+          {showForm ? <HiX className="w-5 h-5" /> : <HiOutlinePlus className="w-5 h-5" />}
           {showForm ? 'Fechar' : 'Nova Referência'}
         </button>
       </div>
 
       {/* Add Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="glass-card p-5 animate-slide-up">
-          <h3 className="font-semibold text-white text-sm mb-4">Adicionar Referência</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Título</label>
+        <form onSubmit={handleSubmit} className="relative p-6 bg-dark-800/80 backdrop-blur-xl border border-dark-600/50 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.3)] animate-slide-up overflow-hidden mb-8 mt-4">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 to-purple-500" />
+          <h3 className="font-bold text-white text-lg mb-6 flex items-center gap-2">
+             Adicionar Referência ao Swipe File
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            <div className="group">
+              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Título</label>
               <input
                 type="text"
                 value={form.title}
                 onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Nome da referência"
-                className="w-full px-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all"
+                className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
                 required
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">URL</label>
+            <div className="group">
+              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">URL</label>
               <input
                 type="url"
                 value={form.url}
                 onChange={e => setForm(prev => ({ ...prev, url: e.target.value }))}
                 placeholder="https://..."
-                className="w-full px-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all"
+                className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Categoria</label>
+            <div className="group">
+              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Categoria</label>
               <select
                 value={form.category}
                 onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500/50 appearance-none cursor-pointer transition-all"
+                className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 appearance-none cursor-pointer transition-all"
               >
                 {swipeCategories.map(cat => (
                   <option key={cat} value={cat} className="bg-dark-800">{cat}</option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Notas</label>
+            <div className="group">
+              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Notas</label>
               <input
                 type="text"
                 value={form.notes}
                 onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Observações rápidas..."
-                className="w-full px-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all"
+                className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
               />
             </div>
           </div>
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-8 border-t border-dark-600/30 pt-6">
             <button
               type="submit"
-              className="px-6 py-2.5 gradient-brand rounded-xl text-white text-sm font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all"
+              className="px-8 py-3 gradient-brand rounded-xl text-white text-sm font-semibold hover:shadow-[0_0_20px_rgba(var(--brand-500),0.3)] hover:scale-[1.02] transition-all min-w-[150px]"
             >
               Salvar
             </button>
@@ -143,49 +146,55 @@ export default function SwipeFile() {
 
       {/* Masonry Grid */}
       {filteredItems.length > 0 ? (
-        <div className="masonry-grid">
-          {filteredItems.map(item => (
-            <div key={item.id} className="masonry-item glass-card p-4 group animate-slide-up">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <span
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium"
-                  style={{
-                    backgroundColor: (categoryColors[item.category] || '#6366f1') + '15',
-                    color: categoryColors[item.category] || '#6366f1'
-                  }}
-                >
-                  {item.category}
-                </span>
-                <button
-                  onClick={() => deleteSwipeItem(item.id)}
-                  className="p-1 text-dark-500 hover:text-danger opacity-0 group-hover:opacity-100 transition-all"
-                >
-                  <HiOutlineTrash className="w-3.5 h-3.5" />
-                </button>
+        <div className="masonry-grid mt-6">
+          {filteredItems.map(item => {
+            const color = categoryColors[item.category] || '#6366f1';
+            return (
+              <div key={item.id} className="masonry-item relative bg-dark-800/80 backdrop-blur-md border border-dark-600/50 rounded-2xl p-6 group animate-slide-up hover:border-brand-500/30 hover:shadow-[0_0_30px_rgba(var(--brand-500),0.1)] transition-all duration-300 overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 opacity-50 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: color }} />
+                
+                <div className="flex items-start justify-between gap-2 mb-4">
+                  <span
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold tracking-wider uppercase border"
+                    style={{
+                      backgroundColor: `${color}15`,
+                      color: color,
+                      borderColor: `${color}30`
+                    }}
+                  >
+                    {item.category}
+                  </span>
+                  <button
+                    onClick={() => deleteSwipeItem(item.id)}
+                    className="p-2 text-dark-500 hover:text-danger hover:bg-danger/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <HiOutlineTrash className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <h4 className="font-bold text-white text-base mb-2 group-hover:text-brand-400 transition-colors">{item.title}</h4>
+                {item.notes && <p className="text-sm text-dark-300 mb-4 leading-relaxed">{item.notes}</p>}
+
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-dark-700/50 hover:bg-dark-700 border border-dark-600/50 hover:border-brand-500/50 rounded-xl text-xs font-semibold text-brand-400 hover:text-brand-300 transition-all w-fit"
+                  >
+                    <HiOutlineExternalLink className="w-4 h-4" />
+                    Abrir link
+                  </a>
+                )}
+
+                {item.createdAt && (
+                  <p className="text-[10px] font-semibold text-dark-500 mt-5 uppercase tracking-wider">
+                    {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
               </div>
-
-              <h4 className="font-semibold text-white text-sm mb-2">{item.title}</h4>
-              {item.notes && <p className="text-xs text-dark-400 mb-3 leading-relaxed">{item.notes}</p>}
-
-              {item.url && (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors"
-                >
-                  <HiOutlineExternalLink className="w-3 h-3" />
-                  Abrir link
-                </a>
-              )}
-
-              {item.createdAt && (
-                <p className="text-xs text-dark-600 mt-2">
-                  {new Date(item.createdAt).toLocaleDateString('pt-BR')}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center min-h-[40vh]">
