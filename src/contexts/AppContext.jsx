@@ -25,6 +25,9 @@ export function AppProvider({ children }) {
   // Auth state
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => {
+    return sessionStorage.getItem('isPasswordRecovery') === 'true';
+  });
 
   // Initialize Auth
   useEffect(() => {
@@ -38,8 +41,14 @@ export function AppProvider({ children }) {
       setLoadingUser(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        sessionStorage.setItem('isPasswordRecovery', 'true');
+        toast.success('Link de redefinição de senha validado. Crie sua nova senha abaixo!');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -725,6 +734,7 @@ export function AppProvider({ children }) {
 
   const value = {
     user, loadingUser,
+    isPasswordRecovery, setIsPasswordRecovery,
     posts, addPost, updatePost, deletePost,
     todos, addTodo, toggleTodo, deleteTodo,
     swipeItems, addSwipeItem, deleteSwipeItem,

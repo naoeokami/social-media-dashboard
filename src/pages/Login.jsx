@@ -5,6 +5,7 @@ import { HiOutlineMail, HiOutlineLockClosed, HiOutlineSparkles, HiOutlineEye, Hi
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +22,14 @@ export default function Login() {
     }
 
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        toast.success('Link de recuperação enviado com sucesso! Verifique seu e-mail.');
+        setIsForgotPassword(false);
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -38,7 +46,7 @@ export default function Login() {
         toast.success('Login realizado com sucesso!');
       }
     } catch (error) {
-      toast.error(error.message || 'Ocorreu um erro ao tentar acessar.');
+      toast.error(error.message || 'Ocorreu um erro ao tentar processar sua solicitação.');
     } finally {
       setLoading(false);
     }
@@ -57,10 +65,12 @@ export default function Login() {
               <HiOutlineSparkles className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
-              Social Hub
+              {isForgotPassword ? 'Recuperar Senha' : 'Social Hub'}
             </h1>
             <p className="text-dark-300 text-sm">
-              Gerencie todo o seu ecossistema de conteúdo em um único lugar.
+              {isForgotPassword 
+                ? 'Insira o seu e-mail para receber o link de redefinição de senha.' 
+                : 'Gerencie todo o seu ecossistema de conteúdo em um único lugar.'}
             </p>
           </div>
 
@@ -80,45 +90,74 @@ export default function Login() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1.5">Senha</label>
-              <div className="relative">
-                <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-12 py-3 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm"
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors outline-none"
-                >
-                  {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
-                </button>
+            {!isForgotPassword && (
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block text-sm font-medium text-dark-200">Senha</label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-brand-400 hover:text-white transition-colors outline-none"
+                    >
+                      Esqueceu a senha?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-12 py-3 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors outline-none"
+                  >
+                    {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3.5 gradient-brand rounded-xl text-white font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50"
             >
-              {loading ? 'Aguarde...' : isSignUp ? 'Criar Conta' : 'Entrar'}
+              {loading 
+                ? 'Aguarde...' 
+                : isForgotPassword 
+                  ? 'Enviar Link de Recuperação' 
+                  : isSignUp 
+                    ? 'Criar Conta' 
+                    : 'Entrar'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-brand-400 hover:text-white transition-colors"
-            >
-              {isSignUp ? 'Já tem uma conta? Entre aqui' : 'Não tem uma conta? Registre-se agora'}
-            </button>
+            {isForgotPassword ? (
+              <button
+                type="button"
+                onClick={() => setIsForgotPassword(false)}
+                className="text-sm text-brand-400 hover:text-white transition-colors outline-none"
+              >
+                Voltar para o Login
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-brand-400 hover:text-white transition-colors"
+              >
+                {isSignUp ? 'Já tem uma conta? Entre aqui' : 'Não tem uma conta? Registre-se agora'}
+              </button>
+            )}
           </div>
         </div>
       </div>

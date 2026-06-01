@@ -13,11 +13,12 @@ import Products from './pages/Products';
 import AgentChat from './pages/AgentChat';
 import Login from './pages/Login';
 import Comandas from './pages/Comandas';
+import ResetPassword from './pages/ResetPassword';
 import { useApp } from './contexts/AppContext';
 import PostStatusModal from './components/PostStatusModal';
 
 export default function App() {
-  const { user, loadingUser, statusNotification, setStatusNotification } = useApp();
+  const { user, loadingUser, statusNotification, setStatusNotification, isPasswordRecovery } = useApp();
 
   if (loadingUser) {
     return (
@@ -38,7 +39,9 @@ export default function App() {
           </div>
         } />
         
-        {!user ? (
+        {isPasswordRecovery ? (
+          <Route path="*" element={<ResetPassword />} />
+        ) : !user ? (
           <Route path="*" element={<Login />} />
         ) : (
           <Route element={<MainLayout />}>
