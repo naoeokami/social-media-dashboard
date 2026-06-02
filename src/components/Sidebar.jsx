@@ -52,7 +52,7 @@ export default function Sidebar() {
         </div>
         {sidebarOpen && (
           <span className="font-bold text-lg bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent whitespace-nowrap animate-fade-in">
-            SocialHub
+            MKTDASH
           </span>
         )}
       </div>
