@@ -178,10 +178,45 @@ export default function Calendar() {
     return null;
   };
 
+  const handleDragStart = (e, item) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('text/plain', JSON.stringify({ id: item.id, calendarType: item.calendarType }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, targetDay) => {
+    e.preventDefault();
+    try {
+      const dataStr = e.dataTransfer.getData('text/plain');
+      if (!dataStr) return;
+      const { id, calendarType } = JSON.parse(dataStr);
+      const targetDateStr = format(targetDay, 'yyyy-MM-dd');
+      
+      if (calendarType === 'post') {
+        const post = posts.find(p => p.id === id);
+        if (post) updatePost(id, { ...post, date: targetDateStr });
+      } else if (calendarType === 'note') {
+        const note = notes.find(n => n.id === id);
+        if (note) updateNote(id, { ...note, date: targetDateStr });
+      } else if (calendarType === 'event') {
+        const event = events.find(e => e.id === id);
+        if (event) updateEvent(id, { ...event, date: targetDateStr });
+      }
+    } catch (err) {
+      console.error('Error dropping item', err);
+    }
+  };
+
+  const selectedDateObj = selectedDate ? parseISO(selectedDate) : new Date();
+
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in lg:h-[calc(100vh-9.5rem)] lg:overflow-hidden flex flex-col pb-2">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1">
             <button onClick={navigatePrev} className="p-2 rounded-lg text-dark-300 hover:text-white hover:bg-dark-700/50 transition-all">
@@ -298,85 +333,203 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar pb-2">
-          <div className="min-w-[700px]">
-            {/* Weekday Headers */}
-            <div className="grid grid-cols-7 border-b border-dark-600/50">
-              {WEEKDAYS.map(day => (
-                <div key={day} className="px-2 py-3 text-center text-xs font-semibold text-dark-400 uppercase tracking-wider">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Days Grid */}
-            <div className={`grid grid-cols-7 ${view === 'week' ? 'min-h-[400px]' : ''}`}>
-              {getDaysInView.map((day, index) => {
-                const dayItems = getItemsForDay(day);
-                const isCurrentMonth = isSameMonth(day, currentDate);
-                const today = isToday(day);
-
-                return (
-                  <div
-                    key={index}
-                    onClick={() => handleDayClick(day)}
-                    className={`calendar-day min-h-[100px] ${view === 'week' ? 'min-h-[400px]' : ''} p-2 border-b border-r border-dark-600/30 cursor-pointer ${
-                      !isCurrentMonth && view === 'month' ? 'opacity-30' : ''
-                    } ${today ? 'bg-brand-500/5 border-brand-500/20' : ''}`}
-                  >
-                    <div className={`text-xs font-medium mb-1 ${today ? 'text-brand-400' : 'text-dark-300'}`}>
-                      {format(day, 'd')}
-                    </div>
-
-                    <div className="space-y-1">
-                      {dayItems.slice(0, view === 'week' ? 15 : 4).map(item => {
-                        const itemColor = getStatusColor(item);
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={(e) => handleEditItem(item, e)}
-                            className="group relative flex items-center gap-1.5 px-2 py-1.5 mb-1 rounded-md text-xs transition-all hover:brightness-125 cursor-pointer"
-                            style={{ 
-                              borderLeft: `4px solid ${itemColor}`,
-                              backgroundColor: `${itemColor}20` // 20 in hex is ~12.5% opacity
-                            }}
-                          >
-                            <span className="truncate flex-1 flex items-center gap-1 text-dark-100 font-medium">
-                              {getItemIcon(item)}
-                            {item.calendarType === 'event' && <span className="text-[10px] font-bold opacity-70">{item.startTime}</span>}
-                            {item.title}
-                          </span>
-                          <div className="hidden group-hover:flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={(e) => handleEditItem(item, e)}
-                              className="p-1 text-dark-300 hover:text-brand-400 transition-colors bg-dark-800/80 rounded-md"
-                              title="Editar"
-                            >
-                              <HiOutlinePencil className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteItem(item, e)}
-                              className="p-1 text-dark-300 hover:text-danger transition-colors bg-dark-800/80 rounded-md"
-                              title="Excluir"
-                            >
-                              <HiOutlineTrash className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                        );
-                      })}
-                      {dayItems.length > (view === 'week' ? 15 : 4) && (
-                        <span className="text-[10px] text-brand-400 px-1.5">+{dayItems.length - (view === 'week' ? 15 : 4)} mais</span>
-                      )}
-                    </div>
+      {/* Grid Layout: Calendar + Sidebar Panel */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
+        
+        {/* Calendar Grid Container */}
+        <div className="lg:col-span-3 glass-card overflow-hidden flex flex-col min-h-0">
+          <div className="overflow-x-auto custom-scrollbar flex-1 flex flex-col min-h-0">
+            <div className="min-w-[700px] flex-1 flex flex-col min-h-0">
+              {/* Weekday Headers */}
+              <div className="grid grid-cols-7 border-b border-dark-600/50 shrink-0">
+                {WEEKDAYS.map(day => (
+                  <div key={day} className="px-2 py-3 text-center text-xs font-semibold text-dark-400 uppercase tracking-wider">
+                    {day}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 auto-rows-fr flex-1 min-h-0">
+                {getDaysInView.map((day, index) => {
+                  const dayItems = getItemsForDay(day);
+                  const isCurrentMonth = isSameMonth(day, currentDate);
+                  const today = isToday(day);
+                  const isSelected = selectedDate && isSameDay(parseISO(selectedDate), day);
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => handleDayClick(day)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, day)}
+                      className={`calendar-day p-2 border-b border-r border-dark-600/30 cursor-pointer transition-all flex flex-col overflow-hidden min-h-0 ${
+                        !isCurrentMonth && view === 'month' ? 'opacity-30' : ''
+                      } ${today ? 'bg-brand-500/5 border-brand-500/20' : ''} ${isSelected ? 'ring-1 ring-brand-500/50 bg-brand-500/5' : ''}`}
+                    >
+                      <div className={`text-xs font-medium mb-1 shrink-0 ${today ? 'text-brand-400 font-bold' : 'text-dark-300'}`}>
+                        {format(day, 'd')}
+                      </div>
+
+                      <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-0.5">
+                        {dayItems.slice(0, view === 'week' ? 15 : 4).map(item => {
+                          const itemColor = getStatusColor(item);
+                          return (
+                            <div
+                              key={item.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, item)}
+                              onClick={(e) => handleEditItem(item, e)}
+                              className="group relative flex items-center gap-1.5 px-2 py-1.5 mb-1 rounded-md text-xs transition-all hover:brightness-125 cursor-grab active:cursor-grabbing"
+                              style={{ 
+                                borderLeft: `4px solid ${itemColor}`,
+                                backgroundColor: `${itemColor}20` 
+                              }}
+                            >
+                              <span className="truncate flex-1 flex items-center gap-1 text-dark-100 font-medium">
+                                {getItemIcon(item)}
+                                {item.calendarType === 'event' && <span className="text-[10px] font-bold opacity-70 shrink-0">{item.startTime}</span>}
+                                {item.title}
+                              </span>
+                              <div className="hidden group-hover:flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={(e) => handleEditItem(item, e)}
+                                  className="p-1 text-dark-300 hover:text-brand-400 transition-colors bg-dark-800/80 rounded-md"
+                                  title="Editar"
+                                >
+                                  <HiOutlinePencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => handleDeleteItem(item, e)}
+                                  className="p-1 text-dark-300 hover:text-danger transition-colors bg-dark-800/80 rounded-md"
+                                  title="Excluir"
+                                >
+                                  <HiOutlineTrash className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {dayItems.length > (view === 'week' ? 15 : 4) && (
+                          <span className="text-[10px] text-brand-400 px-1.5 font-medium shrink-0">+{dayItems.length - (view === 'week' ? 15 : 4)} mais</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Side Panel: Selected Day Details & Posting Options */}
+        <div className="lg:col-span-1 glass-card p-4 flex flex-col gap-4 overflow-hidden min-h-0">
+          <div className="shrink-0 pb-3 border-b border-dark-600/30">
+            <h3 className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-1">Dia Selecionado</h3>
+            <p className="text-lg font-bold text-white capitalize">
+              {format(selectedDateObj, "dd 'de' MMMM", { locale: ptBR })}
+            </p>
+          </div>
+
+          <div className="shrink-0 space-y-2">
+            <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider">Opções de Postagem</h4>
+            <button
+              onClick={() => { setPostModalOpen(true); setEditingPost(null); }}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-xl text-sm font-medium transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <HiOutlineDocumentText className="w-4 h-4" />
+                Novo Post
+              </span>
+              <HiOutlinePlus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => { setNoteModalOpen(true); setEditingNote(null); }}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl text-sm font-medium transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <HiOutlineAnnotation className="w-4 h-4" />
+                Nova Anotação
+              </span>
+              <HiOutlinePlus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => { setEventModalOpen(true); setEditingEvent(null); }}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl text-sm font-medium transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <HiOutlineClock className="w-4 h-4" />
+                Novo Agendamento
+              </span>
+              <HiOutlinePlus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col gap-2 min-h-0">
+            <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider shrink-0">Itens do Dia</h4>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
+              {getItemsForDay(selectedDateObj).length === 0 ? (
+                <div className="h-full min-h-[120px] flex flex-col items-center justify-center p-4 text-center border border-dashed border-dark-600/50 rounded-xl">
+                  <p className="text-xs text-dark-400">Nenhum item para este dia.</p>
+                </div>
+              ) : (
+                getItemsForDay(selectedDateObj).map(item => {
+                  const itemColor = getStatusColor(item);
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={(e) => handleEditItem(item, e)}
+                      className="group flex flex-col gap-2 p-3 bg-dark-700/30 border border-dark-600/30 rounded-xl hover:border-dark-500 transition-all cursor-pointer"
+                      style={{ borderLeft: `4px solid ${itemColor}` }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-semibold text-white line-clamp-2">
+                          {item.title}
+                        </span>
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-dark-700 text-dark-300">
+                          {item.calendarType === 'post' ? 'Post' : item.calendarType === 'note' ? 'Anotação' : 'Evento'}
+                        </span>
+                      </div>
+                      
+                      {item.calendarType === 'event' && (
+                        <div className="flex items-center gap-1 text-[11px] text-dark-300">
+                          <HiOutlineClock className="w-3 h-3 text-blue-400" />
+                          <span>{item.startTime} {item.endTime ? `- ${item.endTime}` : ''}</span>
+                        </div>
+                      )}
+
+                      {item.calendarType === 'post' && item.status && (
+                        <div className="flex items-center gap-1.5">
+                          <span 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: itemColor }}
+                          />
+                          <span className="text-[10px] text-dark-300 capitalize">{item.status}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-dark-600/10 shrink-0">
+                        <button
+                          onClick={(e) => handleEditItem(item, e)}
+                          className="text-xs text-dark-300 hover:text-white transition-colors"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteItem(item, e)}
+                          className="text-xs text-danger hover:brightness-125 transition-all"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Modals */}
