@@ -33,6 +33,7 @@ import {
   HiOutlineAnnotation,
   HiOutlineClock,
   HiOutlineDotsVertical,
+  HiOutlineDocumentText,
 } from 'react-icons/hi';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -47,6 +48,11 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState('month'); // 'month' | 'week'
   const [selectedDate, setSelectedDate] = useState(null);
+  const [activeFilters, setActiveFilters] = useState({
+    post: true,
+    note: true,
+    event: true
+  });
   
   // Modal states
   const [postModalOpen, setPostModalOpen] = useState(false);
@@ -90,9 +96,9 @@ export default function Calendar() {
   }, [currentDate, view]);
 
   const getItemsForDay = (day) => {
-    const dayPosts = posts.filter(p => p.date && isSameDay(parseISO(p.date), day)).map(p => ({ ...p, calendarType: 'post' }));
-    const dayNotes = notes.filter(n => n.date && isSameDay(parseISO(n.date), day)).map(n => ({ ...n, calendarType: 'note' }));
-    const dayEvents = events.filter(e => e.date && isSameDay(parseISO(e.date), day)).map(e => ({ ...e, calendarType: 'event' }));
+    const dayPosts = activeFilters.post ? posts.filter(p => p.date && isSameDay(parseISO(p.date), day)).map(p => ({ ...p, calendarType: 'post' })) : [];
+    const dayNotes = activeFilters.note ? notes.filter(n => n.date && isSameDay(parseISO(n.date), day)).map(n => ({ ...n, calendarType: 'note' })) : [];
+    const dayEvents = activeFilters.event ? events.filter(e => e.date && isSameDay(parseISO(e.date), day)).map(e => ({ ...e, calendarType: 'event' })) : [];
     
     return [...dayPosts, ...dayNotes, ...dayEvents].sort((a, b) => {
       if (a.calendarType === 'event' && b.calendarType === 'event') {
@@ -176,7 +182,7 @@ export default function Calendar() {
     <div className="space-y-4 animate-fade-in">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1">
             <button onClick={navigatePrev} className="p-2 rounded-lg text-dark-300 hover:text-white hover:bg-dark-700/50 transition-all">
               <HiOutlineChevronLeft className="w-5 h-5" />
@@ -194,6 +200,43 @@ export default function Calendar() {
           >
             Hoje
           </button>
+
+          {/* Filtros */}
+          <div className="flex items-center gap-1 bg-dark-800/80 p-1 rounded-xl border border-dark-600/50">
+            <button
+              onClick={() => setActiveFilters(prev => ({ ...prev, post: !prev.post }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                activeFilters.post 
+                  ? 'bg-brand-500/20 text-brand-400 border-brand-500/30' 
+                  : 'text-dark-400 hover:text-dark-200 border-transparent'
+              }`}
+            >
+              <HiOutlineDocumentText className="w-3.5 h-3.5" />
+              Posts
+            </button>
+            <button
+              onClick={() => setActiveFilters(prev => ({ ...prev, note: !prev.note }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                activeFilters.note 
+                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' 
+                  : 'text-dark-400 hover:text-dark-200 border-transparent'
+              }`}
+            >
+              <HiOutlineAnnotation className="w-3.5 h-3.5" />
+              Anotações
+            </button>
+            <button
+              onClick={() => setActiveFilters(prev => ({ ...prev, event: !prev.event }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                activeFilters.event 
+                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' 
+                  : 'text-dark-400 hover:text-dark-200 border-transparent'
+              }`}
+            >
+              <HiOutlineClock className="w-3.5 h-3.5" />
+              Eventos
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
