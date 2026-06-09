@@ -32,7 +32,7 @@ const platformColors = {
 };
 
 export default function Approval() {
-  const { posts, updatePost } = useApp();
+  const { posts, updatePost, socialProfiles } = useApp();
 
   const pendingPosts = posts.filter(p => p.status === 'aprovacao');
 
@@ -80,68 +80,122 @@ export default function Approval() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-        {pendingPosts.map(post => (
-          <div key={post.id} className="bg-slate-900/40 border border-slate-800 rounded-[2rem] overflow-hidden shadow-xl animate-slide-up flex flex-col hover:border-slate-700/50 transition-all duration-300 group">
+        {pendingPosts.map(post => {
+          const selected = (socialProfiles || []).filter(p => post.profileIds?.includes(p.id));
+          const previewName = selected.length > 0 ? selected.map(p => p.handle).join(' • ') : 'g3softecnologia';
+          
+          const renderHeaderAvatar = (sizeClass = "w-9 h-9") => {
+            const isW8 = sizeClass.includes("w-8") || sizeClass.includes("w-9");
+            const isW7 = sizeClass.includes("w-7");
+            const itemSize = isW8 ? "w-6 h-6" : isW7 ? "w-5 h-5" : "w-7 h-7";
             
-            {/* Post Header (Instagram Style) */}
-            <div className="p-4 flex items-center justify-between border-b border-white/5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center">
-                   <span className="text-[10px] font-black text-white">G3</span>
+            if (selected.length <= 1) {
+              const p = selected.length === 1 ? selected[0] : { name: 'G3', avatarUrl: '' };
+              return (
+                <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1.5px] flex-shrink-0`}>
+                  <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[1px]">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {p.avatarUrl ? (
+                        <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white text-[9px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                   <div className="flex items-center gap-1">
-                      <span className="text-xs font-bold text-white leading-tight">g3softecnologia</span>
-                      <HiBadgeCheck className="w-3.5 h-3.5 text-blue-500" />
+              );
+            }
+            
+            const p1 = selected[0];
+            const p2 = selected[1];
+            return (
+              <div className={`relative ${sizeClass} flex-shrink-0`}>
+                <div className={`absolute top-0 left-0 ${itemSize} rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1px] z-10`}>
+                  <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[0.5px]">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden">
+                      {p1.avatarUrl ? (
+                        <img src={p1.avatarUrl} alt={p1.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white text-[7px] font-bold">{p1.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className={`absolute bottom-0 right-0 ${itemSize} rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1px] z-20`}>
+                  <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[0.5px]">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden">
+                      {p2.avatarUrl ? (
+                        <img src={p2.avatarUrl} alt={p2.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white text-[7px] font-bold">{p2.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div key={post.id} className="bg-slate-900/40 border border-slate-800 rounded-[2rem] overflow-hidden shadow-xl animate-slide-up flex flex-col hover:border-slate-700/50 transition-all duration-300 group">
+              
+              {/* Post Header (Instagram Style) */}
+              <div className="p-4 flex items-center justify-between border-b border-white/5">
+                <div className="flex items-center gap-2.5">
+                  {renderHeaderAvatar()}
+                  <div>
+                     <div className="flex items-center gap-1">
+                        <span className="text-xs font-bold text-white leading-tight">{previewName}</span>
+                        <HiBadgeCheck className="w-3.5 h-3.5 text-blue-500" />
+                     </div>
+                     <div className="text-[9px] text-slate-500 uppercase tracking-tighter font-bold">Aguardando Aprovação</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                   <div className="flex gap-1">
+                      {post.platforms?.map(p => {
+                         const Icon = platformIcons[p];
+                         return Icon ? <Icon key={p} className="w-3.5 h-3.5" style={{ color: platformColors[p] }} /> : null;
+                      })}
                    </div>
-                   <div className="text-[9px] text-slate-500 uppercase tracking-tighter font-bold">Aguardando Aprovação</div>
+                   <FaEllipsisH className="text-slate-700 w-3 h-3 hover:text-slate-400 cursor-pointer transition-colors" />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                 <div className="flex gap-1">
-                    {post.platforms?.map(p => {
-                       const Icon = platformIcons[p];
-                       return Icon ? <Icon key={p} className="w-3.5 h-3.5" style={{ color: platformColors[p] }} /> : null;
-                    })}
+
+              {/* Preview Media */}
+              {(post.fileUrls?.length > 0) || post.fileUrl ? (
+                 <div className="aspect-[4/5] w-full bg-dark-900 relative">
+                   <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
                  </div>
-                 <FaEllipsisH className="text-slate-700 w-3 h-3 hover:text-slate-400 cursor-pointer transition-colors" />
-              </div>
-            </div>
-
-            {/* Preview Media */}
-            {(post.fileUrls?.length > 0) || post.fileUrl ? (
-               <div className="aspect-[4/5] w-full bg-dark-900 relative">
-                 <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
-               </div>
-            ) : (
-              <div className="aspect-[4/5] bg-slate-800/30 flex items-center justify-center border-b border-white/5">
-                <div className="text-center opacity-30">
-                  <HiOutlineDocumentText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{post.contentType || 'Sem Mídia'}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Interaction Row */}
-            <div className="p-4 pt-4 flex items-center justify-between">
-               <div className="flex items-center gap-4">
-                  <HiOutlineHeart className="w-6 h-6 text-slate-400 hover:text-red-500 transition-colors cursor-pointer" />
-                  <HiOutlineChat className="w-[1.4rem] h-[1.4rem] text-slate-400 hover:text-white transition-colors cursor-pointer" />
-                  <HiOutlinePaperAirplane className="w-5 h-5 text-slate-400 hover:text-white transition-colors cursor-pointer rotate-90" />
-               </div>
-               <HiOutlineBookmark className="w-5 h-5 text-slate-400 hover:text-white transition-colors cursor-pointer" />
-            </div>
-
-            {/* Content & Caption */}
-            <div className="px-4 pb-4 space-y-3 flex-1">
-              <h3 className="font-bold text-white text-sm line-clamp-1">{post.title}</h3>
-
-              {post.caption && (
-                <div className="text-xs text-slate-400 line-clamp-2 leading-relaxed h-8">
-                  <span className="font-bold text-white mr-2">g3softecnologia</span>
-                  {post.caption}
+              ) : (
+                <div className="aspect-[4/5] bg-slate-800/30 flex items-center justify-center border-b border-white/5">
+                  <div className="text-center opacity-30">
+                    <HiOutlineDocumentText className="w-12 h-12 text-slate-400 mx-auto mb-2" />
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{post.contentType || 'Sem Mídia'}</span>
+                  </div>
                 </div>
               )}
+
+              {/* Interaction Row */}
+              <div className="p-4 pt-4 flex items-center justify-between">
+                 <div className="flex items-center gap-4">
+                    <HiOutlineHeart className="w-6 h-6 text-slate-400 hover:text-red-500 transition-colors cursor-pointer" />
+                    <HiOutlineChat className="w-[1.4rem] h-[1.4rem] text-slate-400 hover:text-white transition-colors cursor-pointer" />
+                    <HiOutlinePaperAirplane className="w-5 h-5 text-slate-400 hover:text-white transition-colors cursor-pointer rotate-90" />
+                 </div>
+                 <HiOutlineBookmark className="w-5 h-5 text-slate-400 hover:text-white transition-colors cursor-pointer" />
+              </div>
+
+              {/* Content & Caption */}
+              <div className="px-4 pb-4 space-y-3 flex-1">
+                <h3 className="font-bold text-white text-sm line-clamp-1">{post.title}</h3>
+
+                {post.caption && (
+                  <div className="text-xs text-slate-400 line-clamp-2 leading-relaxed h-8">
+                    <span className="font-bold text-white mr-2">{previewName}</span>
+                    {post.caption}
+                  </div>
+                )}
 
               {/* Date/Time Tag */}
               {post.date && (
@@ -184,7 +238,8 @@ export default function Approval() {
               </div>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
     </div>
   );

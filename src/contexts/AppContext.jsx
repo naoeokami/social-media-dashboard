@@ -21,6 +21,7 @@ export function AppProvider({ children }) {
   const [statusNotification, setStatusNotification] = useState(null);
   const [notes, setNotes] = useState([]);
   const [events, setEvents] = useState([]);
+  const [socialProfiles, setSocialProfiles] = useState([]);
   
   // Auth state
   const [user, setUser] = useState(null);
@@ -91,6 +92,15 @@ export function AppProvider({ children }) {
         if (localNotes) setNotes(JSON.parse(localNotes));
         const localEvents = localStorage.getItem('socialhub_events');
         if (localEvents) setEvents(JSON.parse(localEvents));
+
+        const localProfiles = localStorage.getItem('socialhub_social_profiles');
+        if (localProfiles) {
+          setSocialProfiles(JSON.parse(localProfiles));
+        } else {
+          const defaultProfiles = [{ id: 'default', name: 'G3 Soft', handle: 'g3softecnologia', avatarUrl: '' }];
+          setSocialProfiles(defaultProfiles);
+          localStorage.setItem('socialhub_social_profiles', JSON.stringify(defaultProfiles));
+        }
         return;
       }
 
@@ -110,6 +120,21 @@ export function AppProvider({ children }) {
                 try { p.fileUrls = JSON.parse(p.fileUrl); } catch(e) { p.fileUrls = [p.fileUrl]; }
              } else if (p.fileUrl) {
                 p.fileUrls = [p.fileUrl];
+             }
+             if (p.profile_ids) {
+               try {
+                 p.profileIds = typeof p.profile_ids === 'string' ? JSON.parse(p.profile_ids) : p.profile_ids;
+               } catch(e) {
+                 p.profileIds = [];
+               }
+             } else if (p.profileIds) {
+               try {
+                 p.profileIds = typeof p.profileIds === 'string' ? JSON.parse(p.profileIds) : p.profileIds;
+               } catch(e) {
+                 p.profileIds = [];
+               }
+             } else {
+               p.profileIds = [];
              }
              return p;
            });
@@ -226,6 +251,34 @@ export function AppProvider({ children }) {
           if (localEvents) setEvents(JSON.parse(localEvents));
         }
 
+        try {
+          const profilesRes = await supabase.from('social_profiles').select('*');
+          if (profilesRes.data) {
+            setSocialProfiles(profilesRes.data.map(p => ({
+              ...p,
+              avatarUrl: p.avatar_url || p.avatarUrl
+            })));
+          } else {
+            const localProfiles = localStorage.getItem('socialhub_social_profiles');
+            if (localProfiles) {
+              setSocialProfiles(JSON.parse(localProfiles));
+            } else {
+              const defaultProfiles = [{ id: 'default', name: 'G3 Soft', handle: 'g3softecnologia', avatarUrl: '' }];
+              setSocialProfiles(defaultProfiles);
+              localStorage.setItem('socialhub_social_profiles', JSON.stringify(defaultProfiles));
+            }
+          }
+        } catch (e) {
+          const localProfiles = localStorage.getItem('socialhub_social_profiles');
+          if (localProfiles) {
+            setSocialProfiles(JSON.parse(localProfiles));
+          } else {
+            const defaultProfiles = [{ id: 'default', name: 'G3 Soft', handle: 'g3softecnologia', avatarUrl: '' }];
+            setSocialProfiles(defaultProfiles);
+            localStorage.setItem('socialhub_social_profiles', JSON.stringify(defaultProfiles));
+          }
+        }
+
       } catch (error) {
         console.error("Erro ao carregar do Supabase:", error);
       }
@@ -248,6 +301,14 @@ export function AppProvider({ children }) {
                 try { newPost.fileUrls = JSON.parse(newPost.fileUrl); } catch(e) { newPost.fileUrls = [newPost.fileUrl]; }
              } else if (newPost.fileUrl) {
                 newPost.fileUrls = [newPost.fileUrl];
+             }
+
+             if (newPost.profile_ids) {
+                try { newPost.profileIds = typeof newPost.profile_ids === 'string' ? JSON.parse(newPost.profile_ids) : newPost.profile_ids; } catch(e) { newPost.profileIds = []; }
+             } else if (newPost.profileIds) {
+                try { newPost.profileIds = typeof newPost.profileIds === 'string' ? JSON.parse(newPost.profileIds) : newPost.profileIds; } catch(e) { newPost.profileIds = []; }
+             } else {
+                newPost.profileIds = [];
              }
 
              setPosts(prev => {
@@ -276,6 +337,15 @@ export function AppProvider({ children }) {
               } else if (newPost.fileUrl) {
                  newPost.fileUrls = [newPost.fileUrl];
               }
+
+              if (newPost.profile_ids) {
+                 try { newPost.profileIds = typeof newPost.profile_ids === 'string' ? JSON.parse(newPost.profile_ids) : newPost.profile_ids; } catch(e) { newPost.profileIds = []; }
+              } else if (newPost.profileIds) {
+                 try { newPost.profileIds = typeof newPost.profileIds === 'string' ? JSON.parse(newPost.profileIds) : newPost.profileIds; } catch(e) { newPost.profileIds = []; }
+              } else {
+                 newPost.profileIds = [];
+              }
+
               setPosts(prev => {
                 if (prev.some(p => p.id === newPost.id)) return prev;
                 return [newPost, ...prev];
@@ -317,10 +387,22 @@ export function AppProvider({ children }) {
          delete dbPost.fileUrls;
       }
 
-      const { error } = await supabase.from('posts').insert(dbPost);
+      if (dbPost.profileIds !== undefined) {
+         dbPost.profile_ids = JSON.stringify(dbPost.profileIds);
+         delete dbPost.profileIds;
+      }
+
+      let { error } = await supabase.from('posts').insert(dbPost);
       if (error) {
-        console.error('Supabase AddPost Error:', error);
-        toast.error(`Erro no Supabase: ${error.message}`);
+        console.warn('Supabase AddPost Error (retrying without profileIds columns):', error);
+        const fallbackPost = { ...dbPost };
+        delete fallbackPost.profile_ids;
+        delete fallbackPost.profileIds;
+        const retry = await supabase.from('posts').insert(fallbackPost);
+        if (retry.error) {
+          console.error('Supabase AddPost Retry Error:', retry.error);
+          toast.error(`Erro no Supabase: ${retry.error.message}`);
+        }
       }
     }
     return newPost;
@@ -348,8 +430,23 @@ export function AppProvider({ children }) {
          delete dbPost.fileUrls;
       }
 
-      const { error } = await supabase.from('posts').update(dbPost).eq('id', id);
-      if (error) toast.error("Erro ao atualizar post.");
+      if (dbPost.profileIds !== undefined) {
+         dbPost.profile_ids = JSON.stringify(dbPost.profileIds);
+         delete dbPost.profileIds;
+      }
+
+      let { error } = await supabase.from('posts').update(dbPost).eq('id', id);
+      if (error) {
+        console.warn('Supabase UpdatePost Error (retrying without profileIds columns):', error);
+        const fallbackPost = { ...dbPost };
+        delete fallbackPost.profile_ids;
+        delete fallbackPost.profileIds;
+        const retry = await supabase.from('posts').update(fallbackPost).eq('id', id);
+        if (retry.error) {
+          console.error('Supabase UpdatePost Retry Error:', retry.error);
+          toast.error("Erro ao atualizar post.");
+        }
+      }
     }
   };
 
@@ -722,6 +819,58 @@ export function AppProvider({ children }) {
     }
   };
 
+  const addSocialProfile = async (prof) => {
+    const newProfile = { ...prof, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    setSocialProfiles(prev => {
+      const updated = [...prev, newProfile];
+      localStorage.setItem('socialhub_social_profiles', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const dbProfile = { ...newProfile, user_id: user?.id, created_at: newProfile.createdAt };
+      delete dbProfile.createdAt;
+      if (dbProfile.avatarUrl !== undefined) {
+        dbProfile.avatar_url = dbProfile.avatarUrl;
+        delete dbProfile.avatarUrl;
+      }
+      const { error } = await supabase.from('social_profiles').insert(dbProfile);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase social_profiles insert:", error);
+    }
+    return newProfile;
+  };
+
+  const updateSocialProfile = async (id, data) => {
+    setSocialProfiles(prev => {
+      const updated = prev.map(p => p.id === id ? { ...p, ...data } : p);
+      localStorage.setItem('socialhub_social_profiles', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const dbProfile = { ...data };
+      delete dbProfile.id;
+      delete dbProfile.user_id;
+      delete dbProfile.created_at;
+      if (dbProfile.avatarUrl !== undefined) {
+        dbProfile.avatar_url = dbProfile.avatarUrl;
+        delete dbProfile.avatarUrl;
+      }
+      const { error } = await supabase.from('social_profiles').update(dbProfile).eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase social_profiles update:", error);
+    }
+  };
+
+  const deleteSocialProfile = async (id) => {
+    setSocialProfiles(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      localStorage.setItem('socialhub_social_profiles', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('social_profiles').delete().eq('id', id);
+      if (error && error.code !== '42P01') console.error("Erro no Supabase social_profiles delete:", error);
+    }
+  };
+
   const updateProfile = (data) => {
     setProfile(data);
     localStorage.setItem('socialhub_profile', JSON.stringify(data));
@@ -744,6 +893,7 @@ export function AppProvider({ children }) {
     schedules, addSchedule, updateSchedule, deleteSchedule,
     notes, addNote, updateNote, deleteNote,
     events, addEvent, updateEvent, deleteEvent,
+    socialProfiles, addSocialProfile, updateSocialProfile, deleteSocialProfile,
     sidebarOpen, setSidebarOpen,
     profile, updateProfile,
     apiKeys, updateApiKeys,

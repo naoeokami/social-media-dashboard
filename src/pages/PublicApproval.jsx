@@ -38,10 +38,28 @@ export default function PublicApproval() {
   const [isAskingAdjustment, setIsAskingAdjustment] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(true);
+  const [socialProfiles, setSocialProfiles] = useState([]);
 
   useEffect(() => {
     async function loadPost() {
       let fetchedData = null;
+      let fetchedProfiles = [];
+      
+      if (hasSupabaseConfig) {
+        try {
+          const { data } = await supabase.from('social_profiles').select('*');
+          fetchedProfiles = (data || []).map(p => ({
+            ...p,
+            avatarUrl: p.avatar_url || p.avatarUrl
+          }));
+        } catch(e) {}
+      }
+      
+      if (fetchedProfiles.length === 0) {
+        fetchedProfiles = JSON.parse(localStorage.getItem('socialhub_social_profiles') || '[]');
+      }
+      setSocialProfiles(fetchedProfiles);
+
       if (hasSupabaseConfig) {
         const { data, error } = await supabase.from('posts').select('*').eq('id', id).single();
         if (error) console.error('Erro ao buscar post do Supabase:', error);
@@ -56,6 +74,13 @@ export default function PublicApproval() {
          }
          if (!fetchedData.fileUrls && fetchedData.fileUrl) {
             fetchedData.fileUrls = [fetchedData.fileUrl];
+         }
+         if (fetchedData.profile_ids) {
+            try { fetchedData.profileIds = typeof fetchedData.profile_ids === 'string' ? JSON.parse(fetchedData.profile_ids) : fetchedData.profile_ids; } catch(e) { fetchedData.profileIds = []; }
+         } else if (fetchedData.profileIds) {
+            try { fetchedData.profileIds = typeof fetchedData.profileIds === 'string' ? JSON.parse(fetchedData.profileIds) : fetchedData.profileIds; } catch(e) { fetchedData.profileIds = []; }
+         } else {
+            fetchedData.profileIds = [];
          }
          setPost(fetchedData);
       }
@@ -115,6 +140,61 @@ export default function PublicApproval() {
     );
   }
 
+  const selected = (socialProfiles || []).filter(p => post.profileIds?.includes(p.id));
+  const previewName = selected.length > 0 ? selected.map(p => p.handle).join(' • ') : 'g3softecnologia';
+
+  const renderHeaderAvatar = (sizeClass = "w-10 h-10") => {
+    const isW8 = sizeClass.includes("w-8");
+    const isW7 = sizeClass.includes("w-7");
+    const itemSize = isW8 ? "w-6 h-6" : isW7 ? "w-5 h-5" : "w-7 h-7";
+    
+    if (selected.length <= 1) {
+      const p = selected.length === 1 ? selected[0] : { name: 'G3', avatarUrl: '' };
+      return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1.5px] flex-shrink-0`}>
+          <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[1px]">
+            <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {p.avatarUrl ? (
+                <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-[9px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    const p1 = selected[0];
+    const p2 = selected[1];
+    return (
+      <div className={`relative ${sizeClass} flex-shrink-0`}>
+        <div className={`absolute top-0 left-0 ${itemSize} rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1px] z-10`}>
+          <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[0.5px]">
+            <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden">
+              {p1.avatarUrl ? (
+                <img src={p1.avatarUrl} alt={p1.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-[7px] font-bold">{p1.name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className={`absolute bottom-0 right-0 ${itemSize} rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1px] z-20`}>
+          <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[0.5px]">
+            <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden">
+              {p2.avatarUrl ? (
+                <img src={p2.avatarUrl} alt={p2.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-[7px] font-bold">{p2.name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 lg:flex">
       {/* Sidebar - Fixed on desktop, hidden on mobile or shown as header */}
@@ -129,12 +209,27 @@ export default function PublicApproval() {
         <div className="space-y-8">
           {/* Section: Perfis */}
           <div>
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Perfís</h3>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Perfis</h3>
             <div className="flex flex-wrap gap-2">
-              <div className="px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-semibold flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></div>
-                G3 Soft
-              </div>
+              {selected.length === 0 ? (
+                <div className="px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-semibold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></div>
+                  G3 Soft
+                </div>
+              ) : (
+                selected.map(p => (
+                  <div key={p.id} className="px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-semibold flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden">
+                      {p.avatarUrl ? (
+                        <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white text-[8px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    {p.name}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -211,11 +306,9 @@ export default function PublicApproval() {
                        <div className="h-full bg-white w-full rounded-full"></div>
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center mt-3 shadow-md">
-                    <span className="text-[10px] font-bold text-white">G3</span>
-                  </div>
+                  {renderHeaderAvatar("w-8 h-8")}
                   <div className="flex items-center gap-2 mt-3 drop-shadow-md">
-                    <span className="text-xs font-bold text-white shadow-sm">g3softecnologia</span>
+                    <span className="text-xs font-bold text-white shadow-sm">{previewName}</span>
                     <span className="text-xs text-white/90 font-medium">1h</span>
                   </div>
                   <div className="flex-1"></div>
@@ -278,10 +371,8 @@ export default function PublicApproval() {
                 {/* Reels Bottom Info */}
                 <div className="absolute bottom-0 left-0 w-[calc(100%-60px)] p-4 z-10">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center">
-                      <span className="text-[10px] font-bold text-white">G3</span>
-                    </div>
-                    <span className="text-sm font-bold text-white drop-shadow-md">g3softecnologia</span>
+                    {renderHeaderAvatar("w-8 h-8")}
+                    <span className="text-sm font-bold text-white drop-shadow-md">{previewName}</span>
                     <button className="border border-white text-white text-xs px-2 py-0.5 rounded-md ml-2 drop-shadow-md bg-transparent">Seguir</button>
                   </div>
                   <div className="text-sm text-white drop-shadow-md line-clamp-2 mb-2 leading-tight">
@@ -289,7 +380,7 @@ export default function PublicApproval() {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-white drop-shadow-md bg-black/30 w-max px-2 py-1 rounded-full backdrop-blur-sm">
                     <span>🎵</span>
-                    <span>Áudio original - g3softecnologia</span>
+                    <span>Áudio original - {previewName}</span>
                   </div>
                 </div>
               </div>
@@ -302,16 +393,10 @@ export default function PublicApproval() {
               {/* Post Header */}
               <div className="p-4 flex items-center justify-between border-b border-slate-800/50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[2px]">
-                    <div className="w-full h-full rounded-full bg-dark-900 flex items-center justify-center p-[2px]">
-                      <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">G3</span>
-                      </div>
-                    </div>
-                  </div>
+                  {renderHeaderAvatar("w-10 h-10")}
                   <div>
                     <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-white">g3softecnologia</span>
+                      <span className="text-sm font-bold text-white">{previewName}</span>
                       <HiBadgeCheck className="w-4 h-4 text-blue-500" />
                     </div>
                     <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Publicidade</div>
@@ -356,7 +441,7 @@ export default function PublicApproval() {
                 {/* Post Caption */}
                 <div className="space-y-2">
                   <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    <span className="font-bold text-white mr-2">g3softecnologia</span>
+                    <span className="font-bold text-white mr-2">{previewName}</span>
                     {post.caption}
                   </div>
                 </div>
