@@ -22,7 +22,10 @@ export default function ImageCarousel({ images }) {
     return lowerUrl.includes('.mp4') || 
            lowerUrl.includes('.webm') || 
            lowerUrl.includes('.ogg') || 
-           lowerUrl.includes('.mov');
+           lowerUrl.includes('.mov') ||
+           lowerUrl.includes('.mkv') ||
+           lowerUrl.includes('.avi') ||
+           lowerUrl.startsWith('data:video/');
   };
 
   return (

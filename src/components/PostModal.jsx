@@ -28,6 +28,19 @@ const emptyPost = {
   profileIds: [],
 };
 
+const isVideo = (url) => {
+  if (!url) return false;
+  if (typeof url !== 'string') return false;
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.includes('.mp4') || 
+         lowerUrl.includes('.webm') || 
+         lowerUrl.includes('.ogg') || 
+         lowerUrl.includes('.mov') ||
+         lowerUrl.includes('.mkv') ||
+         lowerUrl.includes('.avi') ||
+         lowerUrl.startsWith('data:video/');
+};
+
 export default function PostModal({ isOpen, onClose, onSave, editingPost, initialDate }) {
   const { segments, products, socialProfiles } = useApp();
   const [form, setForm] = useState(emptyPost);
@@ -76,13 +89,13 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
     }
     
     if ((form.fileUrls?.length || 0) + files.length > 10) {
-      toast.error('Máximo de 10 imagens permitidas!');
+      toast.error('Máximo de 10 mídias permitidas!');
       return;
     }
 
     try {
       setIsUploading(true);
-      const toastId = toast.loading(`Fazendo upload de ${files.length} imagem(ns)...`);
+      const toastId = toast.loading(`Fazendo upload de ${files.length} mídia(s)...`);
 
       const newUrls = [];
       const options = {
@@ -93,13 +106,15 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
 
       for (const file of files) {
         let compressedFile = file;
-        try {
-          compressedFile = await imageCompression(file, options);
-        } catch (err) {
-          console.warn('Compression failed, using original file', err);
+        if (file.type.startsWith('image/')) {
+          try {
+            compressedFile = await imageCompression(file, options);
+          } catch (err) {
+            console.warn('Compression failed, using original file', err);
+          }
         }
         
-        const safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const safeName = (file.name || 'file.jpg').replace(/[^a-zA-Z0-9.\-_]/g, '');
         const uuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
         const fileName = `${uuid}-${safeName}`;
         
@@ -501,7 +516,7 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                     <div className="flex items-center gap-3">
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/*"
                         multiple
                         onChange={handleImageUpload}
                         disabled={isUploading || (form.fileUrls?.length >= 10)}
@@ -527,7 +542,11 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                             onDrop={() => handleDrop(idx)}
                             className={`relative w-16 h-16 rounded-xl overflow-hidden border ${draggedIdx === idx ? 'border-brand-500 opacity-50' : 'border-dark-600/50'} group/img shadow-lg cursor-grab active:cursor-grabbing`}
                           >
-                            <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover/img:scale-110 duration-500 pointer-events-none" />
+                            {isVideo(url) ? (
+                              <video src={url} className="w-full h-full object-cover pointer-events-none" muted playsInline />
+                            ) : (
+                              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover/img:scale-110 duration-500 pointer-events-none" />
+                            )}
                             <button
                               type="button"
                               onClick={() => removeImage(idx)}
@@ -595,7 +614,11 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
 
                   {isStory ? (
                     <div className="relative flex-1 bg-black">
-                      <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover opacity-90" />
+                      {isVideo(mediaUrl) ? (
+                        <video src={mediaUrl} className="w-full h-full object-cover opacity-90" autoPlay muted loop playsInline />
+                      ) : (
+                        <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover opacity-90" />
+                      )}
                       
                       {/* Barrinhas de Progresso Story */}
                       <div className="absolute top-2 w-full px-2 flex gap-1 z-30">
@@ -644,7 +667,11 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                     </div>
                   ) : isReels ? (
                     <div className="relative flex-1 bg-black">
-                      <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
+                      {isVideo(mediaUrl) ? (
+                        <video src={mediaUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                      ) : (
+                        <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
+                      )}
                       
                       {/* Right side actions Reels */}
                       <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4 z-30">
@@ -693,7 +720,11 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                       </div>
                       
                       <div className="w-full aspect-square bg-dark-800 relative group/feedimg">
-                        <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
+                        {isVideo(mediaUrl) ? (
+                          <video src={mediaUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                        ) : (
+                          <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
+                        )}
                         
                         {/* Carousel Arrows Feed */}
                         {fileUrls.length > 1 && (
