@@ -25,7 +25,7 @@ const navItems = [
   { path: '/tarefas', label: 'Guia de Tarefas', icon: HiOutlineClipboardList },
   { path: '/produtos', label: 'Produtos e Segmentos', icon: HiOutlineShoppingBag },
   { path: '/comandas', label: 'Gerar Comandas', icon: HiOutlineQrcode },
-  // { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles }, // Em desenvolvimento
+  { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles },
 ];
 
 export default function Sidebar() {
