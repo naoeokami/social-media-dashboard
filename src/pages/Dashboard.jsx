@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { fetchAllMetrics } from '../services/apiService';
+import { toast } from 'react-hot-toast';
 // import { mockMetrics } from '../data/mockData';
 import {
   HiOutlineUsers,
@@ -80,14 +81,16 @@ function MetricCard({ data }) {
 }
 
 function TodoWidget() {
-  const { todos, addTodo, toggleTodo, deleteTodo } = useApp();
+  const { todos, addTodo, toggleTodo, updateTodo, deleteTodo } = useApp();
   const [newTodo, setNewTodo] = useState('');
+  const [urgency, setUrgency] = useState('baixa');
 
   const handleAdd = (e) => {
     e.preventDefault();
     if (newTodo.trim()) {
-      addTodo(newTodo.trim());
+      addTodo(newTodo.trim(), urgency);
       setNewTodo('');
+      setUrgency('baixa');
     }
   };
 
@@ -127,9 +130,27 @@ function TodoWidget() {
             <span className={`text-sm flex-1 transition-all ${todo.done ? 'line-through text-dark-500' : 'text-dark-200'}`}>
               {todo.text}
             </span>
+            <select
+              value={todo.urgency || 'baixa'}
+              onChange={e => {
+                updateTodo(todo.id, { urgency: e.target.value });
+                toast.success('Urgência atualizada!');
+              }}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium border bg-transparent cursor-pointer focus:outline-none transition-all flex-shrink-0 ${
+                todo.urgency === 'alta'
+                  ? 'bg-danger/10 text-danger border-danger/20'
+                  : todo.urgency === 'media'
+                  ? 'bg-warning/10 text-warning border-warning/20'
+                  : 'bg-success/10 text-success border-success/20'
+              }`}
+            >
+              <option value="baixa" className="bg-dark-800 text-success">Baixa</option>
+              <option value="media" className="bg-dark-800 text-warning">Média</option>
+              <option value="alta" className="bg-dark-800 text-danger">Alta</option>
+            </select>
             <button
               onClick={() => deleteTodo(todo.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-dark-500 hover:text-danger transition-all"
+              className="opacity-0 group-hover:opacity-100 p-1 text-dark-500 hover:text-danger transition-all flex-shrink-0"
             >
               <HiOutlineTrash className="w-3.5 h-3.5" />
             </button>
@@ -144,11 +165,20 @@ function TodoWidget() {
           value={newTodo}
           onChange={e => setNewTodo(e.target.value)}
           placeholder="Nova tarefa..."
-          className="flex-1 px-3 py-2 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all"
+          className="flex-1 px-3 py-2 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-sm placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all min-w-0"
         />
+        <select
+          value={urgency}
+          onChange={e => setUrgency(e.target.value)}
+          className="px-2 py-2 bg-dark-700/50 border border-dark-600/50 rounded-lg text-white text-xs focus:outline-none focus:border-brand-500/50 transition-all cursor-pointer"
+        >
+          <option value="baixa" className="bg-dark-800 text-success">Baixa</option>
+          <option value="media" className="bg-dark-800 text-warning">Média</option>
+          <option value="alta" className="bg-dark-800 text-danger">Alta</option>
+        </select>
         <button
           type="submit"
-          className="p-2 gradient-brand rounded-lg text-white hover:shadow-lg hover:shadow-brand-500/25 transition-all"
+          className="p-2 gradient-brand rounded-lg text-white hover:shadow-lg hover:shadow-brand-500/25 transition-all flex-shrink-0"
         >
           <HiOutlinePlus className="w-4 h-4" />
         </button>

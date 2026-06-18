@@ -4,14 +4,16 @@ import { HiOutlinePlus, HiOutlineTrash, HiCheck, HiOutlineClipboardList } from '
 import { toast } from 'react-hot-toast';
 
 export default function Tasks() {
-  const { todos, addTodo, toggleTodo, deleteTodo } = useApp();
+  const { todos, addTodo, toggleTodo, updateTodo, deleteTodo } = useApp();
   const [newTask, setNewTask] = useState('');
+  const [urgency, setUrgency] = useState('baixa');
 
   const handleAddTask = (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
-    addTodo(newTask.trim());
+    addTodo(newTask.trim(), urgency);
     setNewTask('');
+    setUrgency('baixa');
     toast.success('Tarefa adicionada!');
   };
 
@@ -51,6 +53,15 @@ export default function Tasks() {
             placeholder="Nova tarefa... (ex: Publicar reels do restaurante)"
             className="flex-1 px-5 py-3.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all shadow-inner"
           />
+          <select
+            value={urgency}
+            onChange={e => setUrgency(e.target.value)}
+            className="px-4 py-3.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 transition-all cursor-pointer"
+          >
+            <option value="baixa" className="bg-dark-800 text-success">Urgência: Baixa</option>
+            <option value="media" className="bg-dark-800 text-warning">Urgência: Média</option>
+            <option value="alta" className="bg-dark-800 text-danger">Urgência: Alta</option>
+          </select>
           <button
             type="submit"
             className="w-full sm:w-auto px-6 py-3.5 gradient-brand rounded-xl text-white font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all flex items-center justify-center gap-2 flex-shrink-0"
@@ -76,7 +87,7 @@ export default function Tasks() {
                     : 'bg-dark-700/50 border-dark-600/50 hover:border-dark-500 hover:shadow-lg'
                 }`}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                   <button
                     onClick={() => toggleTodo(todo.id)}
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -87,13 +98,31 @@ export default function Tasks() {
                   >
                     {todo.done && <HiCheck className="w-4 h-4 text-white" />}
                   </button>
-                  <span className={`text-base font-medium transition-all ${todo.done ? 'line-through text-dark-400' : 'text-white'}`}>
+                  <span className={`text-base font-medium transition-all ${todo.done ? 'line-through text-dark-400' : 'text-white'} flex-1`}>
                     {todo.text}
                   </span>
+                  <select
+                    value={todo.urgency || 'baixa'}
+                    onChange={e => {
+                      updateTodo(todo.id, { urgency: e.target.value });
+                      toast.success('Urgência atualizada!');
+                    }}
+                    className={`text-xs px-2.5 py-1 rounded-full font-semibold border bg-transparent cursor-pointer focus:outline-none transition-all ${
+                      todo.urgency === 'alta'
+                        ? 'bg-danger/10 text-danger border-danger/20'
+                        : todo.urgency === 'media'
+                        ? 'bg-warning/10 text-warning border-warning/20'
+                        : 'bg-success/10 text-success border-success/20'
+                    }`}
+                  >
+                    <option value="baixa" className="bg-dark-800 text-success">Baixa</option>
+                    <option value="media" className="bg-dark-800 text-warning">Média</option>
+                    <option value="alta" className="bg-dark-800 text-danger">Alta</option>
+                  </select>
                 </div>
                 <button
                   onClick={() => deleteTodo(todo.id)}
-                  className="p-2 text-dark-400 hover:text-red-400 hover:bg-dark-600/50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-2 text-dark-400 hover:text-red-400 hover:bg-dark-600/50 rounded-lg opacity-0 group-hover:opacity-100 transition-all ml-4"
                   title="Excluir tarefa"
                 >
                   <HiOutlineTrash className="w-5 h-5" />

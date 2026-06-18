@@ -459,8 +459,8 @@ export function AppProvider({ children }) {
   };
 
   // Todos CRUD
-  const addTodo = async (text) => {
-    const newTodo = { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString() };
+  const addTodo = async (text, urgency = 'baixa') => {
+    const newTodo = { id: crypto.randomUUID(), text, done: false, urgency, createdAt: new Date().toISOString() };
     setTodos(prev => {
       const updated = [...prev, newTodo];
       localStorage.setItem('socialhub_todos', JSON.stringify(updated));
@@ -494,6 +494,22 @@ export function AppProvider({ children }) {
       if (error) {
         console.error("Supabase toggle error:", error);
         toast.error("Tarefa salva localmente (sem conexão c/ banco).");
+      }
+    }
+  };
+
+  const updateTodo = async (id, data) => {
+    setTodos(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...data } : t);
+      localStorage.setItem('socialhub_todos', JSON.stringify(updated));
+      return updated;
+    });
+    
+    if (hasSupabaseConfig) {
+      const { error } = await supabase.from('todos').update(data).eq('id', id);
+      if (error) {
+        console.error("Supabase update error:", error);
+        toast.error("Erro ao atualizar tarefa no banco.");
       }
     }
   };
@@ -885,7 +901,7 @@ export function AppProvider({ children }) {
     user, loadingUser,
     isPasswordRecovery, setIsPasswordRecovery,
     posts, addPost, updatePost, deletePost,
-    todos, addTodo, toggleTodo, deleteTodo,
+    todos, addTodo, toggleTodo, updateTodo, deleteTodo,
     swipeItems, addSwipeItem, deleteSwipeItem,
     shortcuts, addShortcut, updateShortcut, deleteShortcut,
     products, addProduct, updateProduct, deleteProduct,
