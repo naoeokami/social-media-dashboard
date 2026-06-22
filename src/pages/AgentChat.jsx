@@ -223,6 +223,35 @@ export default function AgentChat() {
     setInput('');
   };
 
+  const handleDeleteChat = (chatId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Tem certeza que deseja excluir esta conversa?')) {
+      return;
+    }
+    const updatedHistory = chatHistory.filter(c => c.id !== chatId);
+    if (updatedHistory.length === 0) {
+      const newId = Date.now();
+      const defaultChat = {
+        id: newId,
+        title: 'Nova Conversa',
+        messages: [
+          {
+            role: 'assistant',
+            content: 'Olá! Sou seu Agente IA Versátil. Posso te ajudar atuando como Especialista em Marketing e Social Media (inclusive criando descrições atrativas para seus produtos), ou me adaptar a qualquer outro assunto em que você precise de ajuda. Como posso ser útil hoje?'
+          }
+        ]
+      };
+      setChatHistory([defaultChat]);
+      setActiveChatId(newId);
+    } else {
+      setChatHistory(updatedHistory);
+      if (activeChatId === chatId) {
+        setActiveChatId(updatedHistory[0].id);
+      }
+    }
+    toast.success('Conversa excluída com sucesso!');
+  };
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -488,18 +517,29 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
           
           <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-dark-600/50 scrollbar-track-transparent pr-1">
             {chatHistory.map(chat => (
-              <button
+              <div
                 key={chat.id}
-                onClick={() => setActiveChatId(chat.id)}
-                className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${
+                className={`group w-full flex items-center justify-between rounded-xl transition-all ${
                   activeChatId === chat.id 
                     ? 'bg-dark-700 border border-dark-600/50 text-brand-400 font-medium' 
                     : 'text-dark-400 hover:bg-dark-700/50 hover:text-dark-200'
                 }`}
               >
-                <HiOutlineChat className={`w-5 h-5 flex-shrink-0 ${activeChatId === chat.id ? 'text-brand-400' : 'text-dark-500'}`} />
-                <span className="truncate text-sm">{chat.title}</span>
-              </button>
+                <button
+                  onClick={() => setActiveChatId(chat.id)}
+                  className="flex-1 text-left px-4 py-3 flex items-center gap-3 min-w-0"
+                >
+                  <HiOutlineChat className={`w-5 h-5 flex-shrink-0 ${activeChatId === chat.id ? 'text-brand-400' : 'text-dark-500'}`} />
+                  <span className="truncate text-sm">{chat.title}</span>
+                </button>
+                <button
+                  onClick={(e) => handleDeleteChat(chat.id, e)}
+                  className="p-2 mr-2 text-dark-500 hover:text-red-400 rounded-lg hover:bg-dark-600/50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  title="Excluir Conversa"
+                >
+                  <HiOutlineTrash className="w-4 h-4" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
