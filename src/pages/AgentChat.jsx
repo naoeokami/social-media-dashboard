@@ -16,6 +16,7 @@ import {
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { toast } from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { supabase } from '../lib/supabase';
 
 const fallbackGeminiModels = [];
@@ -781,7 +782,7 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
                 )}
                 
                 <div 
-                  className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-md ${
+                  className={`max-w-[85%] md:max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-md ${
                     msg.role === 'user' 
                       ? 'bg-brand-500/10 text-white border border-brand-500/20 rounded-tr-sm' 
                       : 'bg-dark-700/50 text-dark-100 border border-dark-600/50 rounded-tl-sm'
@@ -789,6 +790,18 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
                 >
                   {msg.role === 'assistant' ? (
                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          table: ({node, ...props}) => (
+                            <div className="overflow-x-auto my-4 scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent">
+                              <table className="min-w-full divide-y divide-dark-600/30 border border-dark-600/30 rounded-xl overflow-hidden" {...props} />
+                            </div>
+                          ),
+                          thead: ({node, ...props}) => <thead className="bg-dark-800/40" {...props} />,
+                          th: ({node, ...props}) => <th className="px-3 py-2 text-left text-xs font-semibold text-brand-300 uppercase tracking-wider border-b border-dark-600/30" {...props} />,
+                          td: ({node, ...props}) => <td className="px-3 py-2 text-xs text-dark-200 border-b border-dark-700/30 whitespace-nowrap" {...props} />,
+                          tr: ({node, ...props}) => <tr className="hover:bg-dark-700/20 transition-colors" {...props} />,
+                        }}
                         className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-a:text-brand-400 marker:text-brand-500 prose-headings:text-brand-300"
                      >
                        {msg.content}
