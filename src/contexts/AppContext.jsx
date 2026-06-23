@@ -22,6 +22,7 @@ export function AppProvider({ children }) {
   const [notes, setNotes] = useState([]);
   const [events, setEvents] = useState([]);
   const [socialProfiles, setSocialProfiles] = useState([]);
+  const [skills, setSkills] = useState([]);
   
   // Auth state
   const [user, setUser] = useState(null);
@@ -74,6 +75,25 @@ export function AppProvider({ children }) {
     }
 
     async function loadData() {
+      const loadLocalSkills = () => {
+        const localSkills = localStorage.getItem('socialhub_skills');
+        if (localSkills) {
+          try {
+            setSkills(JSON.parse(localSkills));
+          } catch(e) {
+            console.error(e);
+          }
+        } else {
+          const defaultSkills = [
+            { id: '1', name: 'Copywriting_AIDA', description: 'Aplica o modelo AIDA (Atenção, Interesse, Desejo e Ação).', prompt: 'Aplica o framework AIDA (Atenção, Interesse, Desejo, Ação) para estruturar a mensagem. Crie um gancho forte no início, gere interesse com dados ou benefícios, desperte o desejo com uma oferta irresistível ou solução de dor, e termine com uma chamada para ação clara.' },
+            { id: '2', name: 'SEO_Social_Media', description: 'Otimiza o texto com palavras-chave e hashtags estratégicas.', prompt: 'Estruture o conteúdo focando em SEO para redes sociais. Identifique e integre palavras-chave de alto volume de busca de forma natural no texto, crie uma hierarquia clara de tópicos, e inclua de 3 a 5 hashtags altamente estratégicas ao final.' },
+            { id: '3', name: 'Escrita_Empatica', description: 'Adota um tom amigável focado na dor e desejo do público.', prompt: 'Adote um tom empático, acolhedor e próximo. Foque em escutar ativamente a dor do cliente, demonstrando que você entende o desafio dele e apresentando a solução como uma ajuda genuína e sem jargões corporativos excessivos.' }
+          ];
+          setSkills(defaultSkills);
+          localStorage.setItem('socialhub_skills', JSON.stringify(defaultSkills));
+        }
+      };
+
       if (!hasSupabaseConfig) {
         import('../data/mockData').then(({ initialTodos, quickShortcuts, funnelSegments }) => {
           setTodos(initialTodos);
@@ -101,6 +121,7 @@ export function AppProvider({ children }) {
           setSocialProfiles(defaultProfiles);
           localStorage.setItem('socialhub_social_profiles', JSON.stringify(defaultProfiles));
         }
+        loadLocalSkills();
         return;
       }
 
@@ -279,6 +300,16 @@ export function AppProvider({ children }) {
           }
         }
 
+        try {
+          const skillsRes = await supabase.from('ai_skills').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
+          if (skillsRes.data && skillsRes.data.length > 0) {
+            setSkills(skillsRes.data);
+          } else {
+            loadLocalSkills();
+          }
+        } catch (e) {
+          loadLocalSkills();
+        }
       } catch (error) {
         console.error("Erro ao carregar do Supabase:", error);
       }
@@ -887,6 +918,68 @@ export function AppProvider({ children }) {
     }
   };
 
+  const addSkill = async (skill) => {
+    const newSkill = { ...skill, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    setSkills(prev => {
+      const updated = [...prev, newSkill];
+      localStorage.setItem('socialhub_skills', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig && user) {
+      const dbSkill = {
+        id: newSkill.id,
+        user_id: user?.id,
+        name: newSkill.name,
+        description: newSkill.description,
+        prompt: newSkill.prompt,
+        created_at: newSkill.createdAt
+      };
+      try {
+        const { error } = await supabase.from('ai_skills').insert(dbSkill);
+        if (error && error.code !== '42P01') console.error("Erro no Supabase ai_skills insert:", error);
+      } catch (err) {
+        console.warn("Falha ao salvar skill no Supabase:", err);
+      }
+    }
+    return newSkill;
+  };
+
+  const updateSkill = async (id, data) => {
+    setSkills(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, ...data } : s);
+      localStorage.setItem('socialhub_skills', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig && user) {
+      const dbSkill = { ...data };
+      delete dbSkill.id;
+      delete dbSkill.user_id;
+      delete dbSkill.createdAt;
+      try {
+        const { error } = await supabase.from('ai_skills').update(dbSkill).eq('id', id);
+        if (error && error.code !== '42P01') console.error("Erro no Supabase ai_skills update:", error);
+      } catch (err) {
+        console.warn("Falha ao atualizar skill no Supabase:", err);
+      }
+    }
+  };
+
+  const deleteSkill = async (id) => {
+    setSkills(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      localStorage.setItem('socialhub_skills', JSON.stringify(updated));
+      return updated;
+    });
+    if (hasSupabaseConfig && user) {
+      try {
+        const { error } = await supabase.from('ai_skills').delete().eq('id', id);
+        if (error && error.code !== '42P01') console.error("Erro no Supabase ai_skills delete:", error);
+      } catch (err) {
+        console.warn("Falha ao deletar skill no Supabase:", err);
+      }
+    }
+  };
+
   const updateProfile = (data) => {
     setProfile(data);
     localStorage.setItem('socialhub_profile', JSON.stringify(data));
@@ -910,6 +1003,7 @@ export function AppProvider({ children }) {
     notes, addNote, updateNote, deleteNote,
     events, addEvent, updateEvent, deleteEvent,
     socialProfiles, addSocialProfile, updateSocialProfile, deleteSocialProfile,
+    skills, addSkill, updateSkill, deleteSkill,
     sidebarOpen, setSidebarOpen,
     profile, updateProfile,
     apiKeys, updateApiKeys,

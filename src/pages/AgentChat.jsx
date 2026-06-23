@@ -11,7 +11,9 @@ import {
   HiOutlineCog, 
   HiOutlineEye, 
   HiOutlineEyeOff,
-  HiOutlineTrash
+  HiOutlineTrash,
+  HiOutlineClipboard,
+  HiCheck
 } from 'react-icons/hi';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { toast } from 'react-hot-toast';
@@ -23,7 +25,7 @@ const fallbackGeminiModels = [];
 const fallbackOpenRouterModels = [];
 
 export default function AgentChat() {
-  const { products, segments, posts } = useApp();
+  const { products, segments, posts, skills, addSkill, deleteSkill } = useApp();
   
   const [chatHistory, setChatHistory] = useState(() => {
     const saved = localStorage.getItem('@g3_agent_chats');
@@ -68,12 +70,19 @@ export default function AgentChat() {
   const [customGeminiKey, setCustomGeminiKey] = useState(() => localStorage.getItem('@g3_agent_custom_gemini_key') || '');
   const [customOpenRouterKey, setCustomOpenRouterKey] = useState(() => localStorage.getItem('@g3_agent_custom_openrouter_key') || '');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('provider'); // 'provider' | 'models' | 'skills'
 
   // DB Models State
   const [dbModels, setDbModels] = useState([]);
   const [newModelName, setNewModelName] = useState('');
   const [newModelValue, setNewModelValue] = useState('');
   const [newModelProvider, setNewModelProvider] = useState('openrouter');
+
+  // Skill Form State
+  const [newSkillName, setNewSkillName] = useState('');
+  const [newSkillDesc, setNewSkillDesc] = useState('');
+  const [newSkillPrompt, setNewSkillPrompt] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
 
   // Load Models from Supabase
   useEffect(() => {
@@ -160,6 +169,64 @@ export default function AgentChat() {
       console.error(err);
       toast.error('Falha ao remover o modelo.');
     }
+  };
+
+  // Add Skill Handler
+  const handleAddSkill = async (e) => {
+    e.preventDefault();
+    if (!newSkillName.trim() || !newSkillPrompt.trim()) {
+      toast.error('Preencha o nome e a instrução/prompt da Skill.');
+      return;
+    }
+
+    // Format skill name: remove spaces with underscores and remove special chars
+    const formattedName = newSkillName.trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^\w\d]/g, '');
+
+    if (!formattedName) {
+      toast.error('Nome de skill inválido.');
+      return;
+    }
+
+    const newSkill = {
+      name: formattedName,
+      description: newSkillDesc.trim(),
+      prompt: newSkillPrompt.trim()
+    };
+
+    try {
+      await addSkill(newSkill);
+      setNewSkillName('');
+      setNewSkillDesc('');
+      setNewSkillPrompt('');
+      toast.success(`Skill *${formattedName} adicionada!`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar a Skill.');
+    }
+  };
+
+  // Delete Skill Handler
+  const handleDeleteSkillLocal = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta Skill?')) return;
+    try {
+      await deleteSkill(id);
+      toast.success('Skill excluída com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao excluir a Skill.');
+    }
+  };
+
+  // Copy to Clipboard Handler
+  const handleCopyText = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    toast.success('Resposta copiada!');
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 2000);
   };
 
   // Save chatHistory to localStorage
@@ -258,7 +325,7 @@ export default function AgentChat() {
   const messagesEndRef = useRef(null);
 
   // Mention / Autocomplete State
-  const [mentionType, setMentionType] = useState(null); // '@' or '#' or null
+  const [mentionType, setMentionType] = useState(null); // '@' or '#' or '*' or null
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionTriggerPos, setMentionTriggerPos] = useState(null);
@@ -270,10 +337,10 @@ export default function AgentChat() {
 
     const cursor = e.target.selectionStart;
     const textBeforeCursor = val.slice(0, cursor);
-    const match = textBeforeCursor.match(/([@#])([^\s]*)$/);
+    const match = textBeforeCursor.match(/([@#\*])([^\s]*)$/);
 
     if (match) {
-      setMentionType(match[1]); // '@' or '#'
+      setMentionType(match[1]); // '@' or '#' or '*'
       setMentionQuery(match[2]); // search query
       setMentionTriggerPos(cursor - match[0].length);
       setMentionIndex(0);
@@ -288,7 +355,9 @@ export default function AgentChat() {
     ? products.filter(p => p.name.toLowerCase().includes(mentionQuery.toLowerCase()))
     : mentionType === '#'
       ? segments.filter(s => s.name.toLowerCase().includes(mentionQuery.toLowerCase()))
-      : [];
+      : mentionType === '*'
+        ? (skills || []).filter(s => s.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        : [];
 
   const selectSuggestion = (suggestion) => {
     if (!mentionType || mentionTriggerPos === null) return;
@@ -355,6 +424,24 @@ export default function AgentChat() {
     setInput('');
     setIsLoading(true);
 
+    // Extract any skill mentions like *Copywriting_AIDA
+    const skillMentions = [...userMsg.matchAll(/\*([\w\d_]+)/g)].map(m => m[1]);
+    let activeSkillsPrompts = '';
+    
+    if (skillMentions.length > 0 && skills && skills.length > 0) {
+      skillMentions.forEach(mention => {
+        const foundSkill = skills.find(s => s.name.toLowerCase() === mention.toLowerCase());
+        if (foundSkill) {
+          activeSkillsPrompts += `\n- Habilidade [${foundSkill.name}]: ${foundSkill.prompt}\n`;
+        }
+      });
+    }
+
+    let skillsContext = '';
+    if (activeSkillsPrompts) {
+      skillsContext = `\n\nDiretrizes de Habilidades Ativas para esta Resposta (Você deve incorporar e aplicar os prompts abaixo):\n${activeSkillsPrompts}`;
+    }
+
     try {
       const contextMessage = `Você é um Agente IA versátil e proativo. Siga rigorosamente estas diretrizes:
 
@@ -368,7 +455,7 @@ Aqui está o contexto atual do meu negócio (lido diretamente do aplicativo):
 - Segmentos de Mercado Ativos: ${segments.map(s => s.name).join(', ') || 'Nenhum segmento customizado ainda.'}.
 - Produtos Cadastrados: ${products.map(p => p.name + ' (Segmento: ' + (p.segment || 'Sem segmento') + ')').join(', ') || 'Nenhum produto cadastrado.'}.
 
-Sempre forneça as respostas utilizando formatação Markdown para facilitar a leitura.`;
+Sempre forneça as respostas utilizando formatação Markdown para facilitar a leitura.${skillsContext}`;
 
       if (provider === 'gemini') {
         const apiKey = customGeminiKey || import.meta.env.VITE_GEMINI_API_KEY;
@@ -564,206 +651,364 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Config Panel */}
-                <div className="lg:col-span-7 space-y-6">
-                  {/* Provider Selector */}
-                  <div>
-                    <label className="block text-sm font-medium text-dark-200 mb-2">Provedor</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setProvider('gemini')}
-                        className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all ${
-                          provider === 'gemini'
-                            ? 'bg-brand-500/10 text-brand-400 border-brand-500/40'
-                            : 'bg-dark-750 text-dark-400 border-dark-600/50 hover:bg-dark-700 hover:text-dark-200'
-                        }`}
-                      >
-                        Google Gemini
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProvider('openrouter')}
-                        className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all ${
-                          provider === 'openrouter'
-                            ? 'bg-brand-500/10 text-brand-400 border-brand-500/40'
-                            : 'bg-dark-750 text-dark-400 border-dark-600/50 hover:bg-dark-700 hover:text-dark-200'
-                        }`}
-                      >
-                        OpenRouter
-                      </button>
-                    </div>
-                  </div>
+              {/* Tab Selector Navigation */}
+              <div className="flex border-b border-dark-700 mb-6 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('provider')}
+                  className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                    settingsTab === 'provider'
+                      ? 'border-brand-500 text-brand-400 font-bold bg-brand-500/5'
+                      : 'border-transparent text-dark-300 hover:text-white hover:bg-dark-800/30'
+                  }`}
+                >
+                  <HiOutlineCog className="w-4 h-4" />
+                  Provedores & Chaves
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('models')}
+                  className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                    settingsTab === 'models'
+                      ? 'border-brand-500 text-brand-400 font-bold bg-brand-500/5'
+                      : 'border-transparent text-dark-300 hover:text-white hover:bg-dark-800/30'
+                  }`}
+                >
+                  <HiCube className="w-4 h-4" />
+                  Modelos de IA
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('skills')}
+                  className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                    settingsTab === 'skills'
+                      ? 'border-brand-500 text-brand-400 font-bold bg-brand-500/5'
+                      : 'border-transparent text-dark-300 hover:text-white hover:bg-dark-800/30'
+                  }`}
+                >
+                  <HiOutlineSparkles className="w-4 h-4" />
+                  Skills & Habilidades
+                </button>
+              </div>
 
-                  {/* Provider Settings */}
-                  {provider === 'gemini' ? (
-                    <div className="space-y-4 animate-fade-in">
-                      <div>
-                        <label className="block text-sm font-medium text-dark-200 mb-2">Modelo Gemini Selecionado</label>
-                        <select
-                          value={geminiModel}
-                          onChange={(e) => setGeminiModel(e.target.value)}
-                          className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
+              <div className="flex-1 overflow-y-auto w-full py-2">
+                {/* 1. Provider & Keys Tab */}
+                {settingsTab === 'provider' && (
+                  <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+                    {/* Provider Selector */}
+                    <div>
+                      <label className="block text-sm font-medium text-dark-200 mb-2">Provedor de Inteligência Artificial</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setProvider('gemini')}
+                          className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all ${
+                            provider === 'gemini'
+                              ? 'bg-brand-500/10 text-brand-400 border-brand-500/40'
+                              : 'bg-dark-750 text-dark-400 border-dark-600/50 hover:bg-dark-700 hover:text-dark-200'
+                          }`}
                         >
-                          {currentProviderModels.map(m => (
-                            <option key={m.value} value={m.value}>{m.name || m.value}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-medium text-dark-200">
-                            Chave de API Customizada (Opcional)
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            className="text-dark-400 hover:text-white transition-all"
-                          >
-                            {showApiKey ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                        <input
-                          type={showApiKey ? "text" : "password"}
-                          value={customGeminiKey}
-                          onChange={(e) => setCustomGeminiKey(e.target.value)}
-                          placeholder="Deixe vazio para usar do arquivo .env.local"
-                          className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all shadow-inner"
-                        />
-                        <p className="text-xs text-dark-400 mt-1.5">
-                          Se não configurada aqui, utilizará a variável <code className="text-brand-400">VITE_GEMINI_API_KEY</code> do seu arquivo local.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4 animate-fade-in">
-                      <div>
-                        <label className="block text-sm font-medium text-dark-200 mb-2">Modelo OpenRouter Selecionado</label>
-                        <select
-                          value={openRouterModel}
-                          onChange={(e) => setOpenRouterModel(e.target.value)}
-                          className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
+                          Google Gemini
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProvider('openrouter')}
+                          className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all ${
+                            provider === 'openrouter'
+                              ? 'bg-brand-500/10 text-brand-400 border-brand-500/40'
+                              : 'bg-dark-750 text-dark-400 border-dark-600/50 hover:bg-dark-700 hover:text-dark-200'
+                          }`}
                         >
-                          {currentProviderModels.map(m => (
-                            <option key={m.value} value={m.value}>{m.name || m.value}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-medium text-dark-200">
-                            Chave de API OpenRouter (Opcional)
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            className="text-dark-400 hover:text-white transition-all"
-                          >
-                            {showApiKey ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                        <input
-                          type={showApiKey ? "text" : "password"}
-                          value={customOpenRouterKey}
-                          onChange={(e) => setCustomOpenRouterKey(e.target.value)}
-                          placeholder="sk-or-v1-..."
-                          className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all shadow-inner"
-                        />
-                        <p className="text-xs text-dark-400 mt-1.5">
-                          Se não configurada aqui, utilizará a variável <code className="text-brand-400">VITE_OPENROUTER_API_KEY</code> do seu arquivo local.
-                        </p>
+                          OpenRouter
+                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Right DB Models Management */}
-                <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-dark-600/50 pt-6 lg:pt-0 lg:pl-8 space-y-6">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-3">Modelos no Banco (Supabase)</h4>
-                    
-                    {dbModels.length === 0 ? (
-                      <p className="text-xs text-dark-400 italic bg-dark-900/50 p-3 rounded-xl border border-dark-700/50">
-                        Nenhum modelo customizado adicionado ao banco ainda. Usando modelos padrões.
-                      </p>
-                    ) : (
-                      <div className="max-h-48 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-                        {dbModels.map(model => (
-                          <div 
-                            key={model.id}
-                            className="flex items-center justify-between p-2.5 bg-dark-900/50 border border-dark-700/50 rounded-xl text-xs"
+                    {/* Provider Settings Details */}
+                    {provider === 'gemini' ? (
+                      <div className="space-y-4 animate-fade-in">
+                        <div>
+                          <label className="block text-sm font-medium text-dark-200 mb-2">Modelo Gemini Selecionado</label>
+                          <select
+                            value={geminiModel}
+                            onChange={(e) => setGeminiModel(e.target.value)}
+                            className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
                           >
-                            <div className="truncate pr-2">
-                              <div className="font-semibold text-white truncate">{model.name}</div>
-                              <div className="text-dark-400 font-mono truncate">{model.value}</div>
-                              <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                model.provider === 'gemini' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
-                              }`}>
-                                {model.provider.toUpperCase()}
-                              </span>
-                            </div>
+                            {currentProviderModels.map(m => (
+                              <option key={m.value} value={m.value}>{m.name || m.value}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-medium text-dark-200">
+                              Chave de API Customizada (Opcional)
+                            </label>
                             <button
-                              onClick={() => handleDeleteModel(model.id)}
-                              className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition-all flex-shrink-0"
-                              title="Remover Modelo"
+                              type="button"
+                              onClick={() => setShowApiKey(!showApiKey)}
+                              className="text-dark-400 hover:text-white transition-all"
                             >
-                              <HiOutlineTrash className="w-4 h-4" />
+                              {showApiKey ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                             </button>
                           </div>
-                        ))}
+                          <input
+                            type={showApiKey ? "text" : "password"}
+                            value={customGeminiKey}
+                            onChange={(e) => setCustomGeminiKey(e.target.value)}
+                            placeholder="Deixe vazio para usar do arquivo .env.local"
+                            className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all shadow-inner"
+                          />
+                          <p className="text-xs text-dark-400 mt-1.5">
+                            Se não configurada aqui, utilizará a variável <code className="text-brand-400">VITE_GEMINI_API_KEY</code> do seu arquivo local.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 animate-fade-in">
+                        <div>
+                          <label className="block text-sm font-medium text-dark-200 mb-2">Modelo OpenRouter Selecionado</label>
+                          <select
+                            value={openRouterModel}
+                            onChange={(e) => setOpenRouterModel(e.target.value)}
+                            className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all"
+                          >
+                            {currentProviderModels.map(m => (
+                              <option key={m.value} value={m.value}>{m.name || m.value}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-medium text-dark-200">
+                              Chave de API OpenRouter (Opcional)
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowApiKey(!showApiKey)}
+                              className="text-dark-400 hover:text-white transition-all"
+                            >
+                              {showApiKey ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <input
+                            type={showApiKey ? "text" : "password"}
+                            value={customOpenRouterKey}
+                            onChange={(e) => setCustomOpenRouterKey(e.target.value)}
+                            placeholder="sk-or-v1-..."
+                            className="w-full px-4 py-3 bg-dark-900 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all shadow-inner"
+                          />
+                          <p className="text-xs text-dark-400 mt-1.5">
+                            Se não configurada aqui, utilizará a variável <code className="text-brand-400">VITE_OPENROUTER_API_KEY</code> do seu arquivo local.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
+                )}
 
-                  {/* Add Model Form */}
-                  <form onSubmit={handleAddModel} className="bg-dark-750/30 p-4 border border-dark-600/30 rounded-xl space-y-3">
-                    <h5 className="text-xs font-bold text-white uppercase tracking-wider">Adicionar Novo Modelo</h5>
-                    
-                    <div>
-                      <label className="block text-[11px] text-dark-300 mb-1">Provedor</label>
-                      <select
-                        value={newModelProvider}
-                        onChange={(e) => setNewModelProvider(e.target.value)}
-                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                {/* 2. Custom Models Tab */}
+                {settingsTab === 'models' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto animate-fade-in items-start">
+                    {/* Models List */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-white">Modelos Registrados (Supabase)</h4>
+                      {dbModels.length === 0 ? (
+                        <p className="text-xs text-dark-400 italic bg-dark-900/50 p-4 rounded-xl border border-dark-700/50">
+                          Nenhum modelo customizado adicionado ao banco ainda. Usando modelos padrões.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-[380px] overflow-y-auto scrollbar-thin pr-1">
+                          {dbModels.map(model => (
+                            <div 
+                              key={model.id}
+                              className="flex items-center justify-between p-3 bg-dark-750/30 border border-dark-700/50 rounded-xl text-xs"
+                            >
+                              <div className="truncate pr-2">
+                                <div className="font-semibold text-white truncate">{model.name}</div>
+                                <div className="text-dark-400 font-mono truncate">{model.value}</div>
+                                <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  model.provider === 'gemini' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
+                                }`}>
+                                  {model.provider.toUpperCase()}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteModel(model.id)}
+                                className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-all flex-shrink-0"
+                                title="Remover Modelo"
+                              >
+                                <HiOutlineTrash className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Add Model Form */}
+                    <form onSubmit={handleAddModel} className="bg-dark-750/30 p-5 border border-dark-600/30 rounded-xl space-y-4">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Adicionar Novo Modelo</h4>
+                      
+                      <div>
+                        <label className="block text-xs text-dark-350 mb-1">Provedor</label>
+                        <select
+                          value={newModelProvider}
+                          onChange={(e) => setNewModelProvider(e.target.value)}
+                          className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                        >
+                          <option value="openrouter">OpenRouter</option>
+                          <option value="gemini">Google Gemini</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-dark-350 mb-1">Nome de Exibição</label>
+                        <input
+                          type="text"
+                          value={newModelName}
+                          onChange={(e) => setNewModelName(e.target.value)}
+                          placeholder="Ex: DeepSeek R1"
+                          className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-dark-350 mb-1">ID / Valor do Modelo</label>
+                        <input
+                          type="text"
+                          value={newModelValue}
+                          onChange={(e) => setNewModelValue(e.target.value)}
+                          placeholder="Ex: deepseek/deepseek-reasoner"
+                          className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500 font-mono"
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg text-xs transition-all shadow-md shadow-brand-500/10"
                       >
-                        <option value="openrouter">OpenRouter</option>
-                        <option value="gemini">Google Gemini</option>
-                      </select>
+                        Salvar Modelo
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* 3. AI Skills Tab */}
+                {settingsTab === 'skills' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto animate-fade-in items-start">
+                    {/* Left Column: Skills List & Tips */}
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="text-sm font-semibold text-white mb-2">Habilidades Cadastradas (Skills)</h4>
+                        {(skills || []).length === 0 ? (
+                          <p className="text-xs text-dark-400 italic bg-dark-900/50 p-4 rounded-xl border border-dark-700/50">
+                            Nenhuma skill cadastrada ainda.
+                          </p>
+                        ) : (
+                          <div className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-thin pr-1">
+                            {(skills || []).map(skill => (
+                              <div 
+                                key={skill.id}
+                                className="flex items-center justify-between p-3 bg-dark-750/30 border border-dark-700/50 rounded-xl text-xs"
+                              >
+                                <div className="truncate pr-2">
+                                  <div className="font-semibold text-white truncate flex items-center gap-1">
+                                    <span className="text-brand-400 font-mono font-bold">*</span>
+                                    {skill.name}
+                                  </div>
+                                  <div className="text-dark-400 truncate text-[11px] mt-0.5">{skill.description}</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSkillLocal(skill.id)}
+                                  className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-all flex-shrink-0"
+                                  title="Remover Skill"
+                                >
+                                  <HiOutlineTrash className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Inspiration sites */}
+                      <div className="bg-brand-500/5 border border-brand-500/10 p-4 rounded-xl">
+                        <h5 className="text-xs font-bold text-brand-300 mb-1">💡 Obter Prompts & Inspirações</h5>
+                        <p className="text-[11px] text-dark-450 mb-3 leading-relaxed">
+                          Você pode buscar prompts profissionais prontos para copiar e usar nestes sites:
+                        </p>
+                        <div className="space-y-2 text-xs">
+                          <a href="https://prompts.chat" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between text-brand-400 hover:underline">
+                            <span>Awesome ChatGPT Prompts</span>
+                            <span className="text-[10px] bg-brand-500/15 px-2 py-0.5 rounded font-mono text-brand-300">prompts.chat</span>
+                          </a>
+                          <a href="https://prompthero.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between text-brand-400 hover:underline">
+                            <span>PromptHero (Biblioteca)</span>
+                            <span className="text-[10px] bg-brand-500/15 px-2 py-0.5 rounded font-mono text-brand-300">prompthero.com</span>
+                          </a>
+                          <a href="https://flowgpt.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between text-brand-400 hover:underline">
+                            <span>FlowGPT (Galeria de Prompts)</span>
+                            <span className="text-[10px] bg-brand-500/15 px-2 py-0.5 rounded font-mono text-brand-300">flowgpt.com</span>
+                          </a>
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] text-dark-300 mb-1">Nome de Exibição</label>
-                      <input
-                        type="text"
-                        value={newModelName}
-                        onChange={(e) => setNewModelName(e.target.value)}
-                        placeholder="Ex: DeepSeek R1"
-                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500"
-                      />
-                    </div>
+                    {/* Right Column: Add Skill Form */}
+                    <form onSubmit={handleAddSkill} className="bg-dark-750/30 p-5 border border-dark-600/30 rounded-xl space-y-4">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Nova Habilidade da IA</h4>
+                      
+                      <div>
+                        <label className="block text-xs text-dark-350 mb-1">Nome da Skill (sem espaços)</label>
+                        <input
+                          type="text"
+                          value={newSkillName}
+                          onChange={(e) => setNewSkillName(e.target.value)}
+                          placeholder="Ex: Copywriting_Vendas"
+                          className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500"
+                          required
+                        />
+                      </div>
 
-                    <div>
-                      <label className="block text-[11px] text-dark-300 mb-1">ID/Valor do Modelo</label>
-                      <input
-                        type="text"
-                        value={newModelValue}
-                        onChange={(e) => setNewModelValue(e.target.value)}
-                        placeholder="Ex: deepseek/deepseek-reasoner"
-                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500 font-mono"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-xs text-dark-350 mb-1">Descrição Curta</label>
+                        <input
+                          type="text"
+                          value={newSkillDesc}
+                          onChange={(e) => setNewSkillDesc(e.target.value)}
+                          placeholder="Ex: Habilidade focada na estrutura AIDA"
+                          className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500"
+                        />
+                      </div>
 
-                    <button
-                      type="submit"
-                      className="w-full py-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg text-xs transition-all shadow-md shadow-brand-500/10"
-                    >
-                      Salvar Modelo
-                    </button>
-                  </form>
-                </div>
+                      <div>
+                        <label className="block text-xs text-dark-350 mb-1">Prompt / Instruções da Habilidade</label>
+                        <textarea
+                          value={newSkillPrompt}
+                          onChange={(e) => setNewSkillPrompt(e.target.value)}
+                          placeholder="Ex: Escreva usando ganchos fortes, tom ativo..."
+                          rows={4}
+                          className="w-full px-3 py-2 bg-dark-900 border border-dark-600/50 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 placeholder-dark-500 resize-none font-sans"
+                          required
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg text-xs transition-all shadow-md shadow-brand-500/10"
+                      >
+                        Salvar Habilidade
+                      </button>
+                    </form>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -782,12 +1027,25 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
                 )}
                 
                 <div 
-                  className={`max-w-[85%] md:max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-md ${
+                  className={`max-w-[85%] md:max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-md relative group/msg ${
                     msg.role === 'user' 
                       ? 'bg-brand-500/10 text-white border border-brand-500/20 rounded-tr-sm' 
                       : 'bg-dark-700/50 text-dark-100 border border-dark-600/50 rounded-tl-sm'
                   }`}
                 >
+                  {msg.role === 'assistant' && (
+                    <button
+                      onClick={() => handleCopyText(msg.content, idx)}
+                      className="absolute top-3 right-3 p-1.5 rounded-lg bg-dark-800/80 hover:bg-dark-900 text-dark-300 hover:text-white border border-dark-600/30 opacity-100 md:opacity-0 md:group-hover/msg:opacity-100 transition-opacity z-20"
+                      title="Copiar resposta por completo"
+                    >
+                      {copiedId === idx ? (
+                        <HiCheck className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <HiOutlineClipboard className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                   {msg.role === 'assistant' ? (
                      <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
@@ -844,7 +1102,7 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
             {mentionType && suggestions.length > 0 && (
               <div className="absolute bottom-full left-4 mb-2 bg-dark-900 border border-dark-600/60 rounded-xl shadow-2xl w-64 max-h-48 overflow-y-auto z-40 p-1 divide-y divide-dark-700/50">
                 <div className="px-3 py-1.5 text-[10px] font-bold text-brand-400 uppercase tracking-wider">
-                  {mentionType === '@' ? 'Marcar Produto' : 'Marcar Segmento'}
+                  {mentionType === '@' ? 'Marcar Produto' : mentionType === '#' ? 'Marcar Segmento' : 'Ativar Skill da IA'}
                 </div>
                 {suggestions.map((item, index) => (
                   <button
