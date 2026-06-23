@@ -229,6 +229,15 @@ export default function AgentChat() {
     }, 2000);
   };
 
+  // Cancel Response Generation Handler
+  const handleCancelGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+      toast.success('Geração cancelada!');
+    }
+  };
+
   // Save chatHistory to localStorage
   useEffect(() => {
     localStorage.setItem('@g3_agent_chats', JSON.stringify(chatHistory));
@@ -323,6 +332,7 @@ export default function AgentChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // Mention / Autocomplete State
   const [mentionType, setMentionType] = useState(null); // '@' or '#' or '*' or null
@@ -398,6 +408,11 @@ export default function AgentChat() {
         e.preventDefault();
         setMentionType(null);
       }
+    } else {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit(e);
+      }
     }
   };
 
@@ -423,6 +438,9 @@ export default function AgentChat() {
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setInput('');
     setIsLoading(true);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     // Extract any skill mentions like *Copywriting_AIDA
     const skillMentions = [...userMsg.matchAll(/\*([\w\d_]+)/g)].map(m => m[1]);
@@ -485,8 +503,17 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
 
         const userMsgWithContext = `${contextMessage}\n\n[Mensagem do Usuário]: ${userMsg}`;
         
-        const result = await chatSession.sendMessage(userMsgWithContext);
-        const responseText = result.response.text();
+        let resultPromise = chatSession.sendMessage(userMsgWithContext);
+
+        // Wrap the SDK promise to support AbortController
+        const responseText = await Promise.race([
+          resultPromise.then(res => res.response.text()),
+          new Promise((_, reject) => {
+            const abort = () => reject(new DOMException('Aborted', 'AbortError'));
+            if (controller.signal.aborted) abort();
+            controller.signal.addEventListener('abort', abort);
+          })
+        ]);
 
         setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
 
@@ -509,6 +536,7 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
         ];
 
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          signal: controller.signal,
           method: "POST",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
@@ -545,6 +573,10 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
       }
 
     } catch (error) {
+      if (error.name === 'AbortError' || error.message?.includes('aborted') || controller.signal.aborted) {
+        console.log('Geração de texto cancelada pelo usuário.');
+        return;
+      }
       console.error('Erro ao chamar o modelo:', error);
       const errorMessage = error?.message || 'Verifique as chaves e a rede.';
       toast.error(`Falha na IA: ${errorMessage}`);
@@ -552,6 +584,7 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
       setInput(userMsg);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -1126,27 +1159,38 @@ Sempre forneça as respostas utilizando formatação Markdown para facilitar a l
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="flex gap-3">
-               <div className="flex-1 relative">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ex: Crie ideias de reels para o Produto X..."
-                    className="w-full pl-5 pr-12 py-4 bg-dark-900 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all shadow-inner"
-                    disabled={isLoading}
-                  />
-               </div>
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="px-6 py-4 gradient-brand rounded-xl text-white font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all disabled:opacity-50 flex items-center justify-center min-w-[64px]"
-              >
-                <HiOutlinePaperAirplane className="w-6 h-6 rotate-90" />
-              </button>
-            </form>
+             <form onSubmit={handleSubmit} className="flex gap-3 items-end">
+                <div className="flex-1 relative">
+                   <textarea
+                     ref={inputRef}
+                     rows={1}
+                     value={input}
+                     onChange={handleInputChange}
+                     onKeyDown={handleKeyDown}
+                     placeholder="Ex: Crie ideias de reels para o Produto X... (Shift + Enter para pular linha)"
+                     className="w-full pl-5 pr-12 py-3.5 bg-dark-900 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all shadow-inner resize-none min-h-[48px] max-h-[140px] scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent"
+                     disabled={isLoading}
+                   />
+                </div>
+               {isLoading ? (
+                 <button
+                   type="button"
+                   onClick={handleCancelGeneration}
+                   className="px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-red-500/25 transition-all flex items-center justify-center min-w-[64px] h-[48px]"
+                   title="Cancelar geração de texto"
+                 >
+                   <div className="w-3.5 h-3.5 bg-white rounded-sm"></div>
+                 </button>
+               ) : (
+                 <button
+                   type="submit"
+                   disabled={!input.trim()}
+                   className="px-6 py-3.5 gradient-brand rounded-xl text-white font-medium hover:shadow-lg hover:shadow-brand-500/25 transition-all disabled:opacity-50 flex items-center justify-center min-w-[64px] h-[48px]"
+                 >
+                   <HiOutlinePaperAirplane className="w-6 h-6 rotate-90" />
+                 </button>
+               )}
+             </form>
             <div className="mt-3 text-center text-xs text-dark-400">
                O Agente possui conhecimento das configurações do seu negócio gravadas no site.
             </div>
