@@ -13,6 +13,7 @@ import {
   HiOutlineShoppingBag,
   HiOutlineClock,
   HiOutlineQrcode,
+  HiOutlineTemplate,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -26,6 +27,7 @@ const navItems = [
   { path: '/produtos', label: 'Produtos e Segmentos', icon: HiOutlineShoppingBag },
   { path: '/comandas', label: 'Gerar Comandas', icon: HiOutlineQrcode },
   { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles },
+  { path: '/criador-post', label: 'Criador Visual', icon: HiOutlineTemplate },
 ];
 
 export default function Sidebar() {

@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import Tasks from './pages/Tasks';
 import Products from './pages/Products';
 import AgentChat from './pages/AgentChat';
+import PostCreator from './pages/PostCreator';
 import Login from './pages/Login';
 import Comandas from './pages/Comandas';
 import ResetPassword from './pages/ResetPassword';
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/produtos" element={<Products />} />
             <Route path="/comandas" element={<Comandas />} />
             <Route path="/agente" element={<AgentChat />} />
+            <Route path="/criador-post" element={<PostCreator />} />
           </Route>
         )}
       </Routes>
