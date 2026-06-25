@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { HiX, HiOutlineDocumentText, HiOutlineCalendar, HiOutlineColorSwatch, HiOutlineMenuAlt2, HiOutlinePencilAlt, HiCheck } from 'react-icons/hi';
 
 const colors = [
@@ -38,7 +39,7 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote, initia
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
       <div className="relative w-full max-w-md bg-dark-800 border border-dark-600/50 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] animate-slide-up overflow-hidden">
@@ -147,6 +148,7 @@ export default function NoteModal({ isOpen, onClose, onSave, editingNote, initia
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

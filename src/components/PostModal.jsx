@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   HiX, HiOutlineLink, HiOutlineCurrencyDollar, HiHeart, HiChat, 
   HiPaperAirplane, HiBookmark, HiDotsHorizontal, HiChevronLeft, 
@@ -254,7 +255,7 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
   const nextSlide = () => setCurrentSlide(p => Math.min(p + 1, fileUrls.length - 1));
   const prevSlide = () => setCurrentSlide(p => Math.max(p - 1, 0));
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
@@ -796,6 +797,7 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

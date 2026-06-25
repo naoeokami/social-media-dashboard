@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { HiX, HiOutlineClock, HiOutlineCalendar, HiOutlineTag, HiOutlineMenuAlt2, HiOutlineSparkles } from 'react-icons/hi';
 
 const eventTypes = [
@@ -39,7 +40,7 @@ export default function EventModal({ isOpen, onClose, onSave, editingEvent, init
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
       <div className="relative w-full max-w-md bg-dark-800 border border-dark-600/50 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] animate-slide-up overflow-hidden">
@@ -62,44 +63,41 @@ export default function EventModal({ isOpen, onClose, onSave, editingEvent, init
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Título */}
           <div className="group">
-            <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Título do Evento/Reunião</label>
+            <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Título do Evento</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={e => setForm({ ...form, title: e.target.value })}
+              className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm"
+              placeholder="Digite o título..."
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* Tipo de Evento */}
+          <div className="group">
+            <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Tipo de Evento</label>
             <div className="relative">
-              <HiOutlineSparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors" />
-              <input
-                type="text"
-                value={form.title}
-                onChange={e => setForm({ ...form, title: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm"
-                placeholder="Ex: Reunião com Cliente X"
-                required
-                autoFocus
-              />
+              <HiOutlineTag className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+              <select
+                value={form.type}
+                onChange={e => setForm({ ...form, type: e.target.value })}
+                className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none"
+              >
+                {eventTypes.map(type => (
+                  <option key={type} value={type} className="bg-dark-800">{type}</option>
+                ))}
+              </select>
             </div>
           </div>
 
+          {/* Data & Horários */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Tipo */}
-            <div className="group">
-              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Tipo</label>
+            <div className="group col-span-2 sm:col-span-1">
+              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Data</label>
               <div className="relative">
-                <HiOutlineTag className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors" />
-                <select
-                  value={form.type}
-                  onChange={e => setForm({ ...form, type: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none cursor-pointer"
-                >
-                  {eventTypes.map(t => (
-                    <option key={t} value={t} className="bg-dark-800">{t}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Data */}
-            <div className="group">
-              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Data</label>
-              <div className="relative">
-                <HiOutlineCalendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors z-10 pointer-events-none" />
+                <HiOutlineCalendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 z-10 pointer-events-none" />
                 <input
                   type="date"
                   value={form.date}
@@ -109,31 +107,26 @@ export default function EventModal({ isOpen, onClose, onSave, editingEvent, init
                 />
               </div>
             </div>
-          </div>
 
-          {/* Horários */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="group">
-              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Início</label>
-              <div className="relative">
-                <HiOutlineClock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors z-10 pointer-events-none" />
+            <div className="grid grid-cols-2 gap-2 col-span-2 sm:col-span-1">
+              <div>
+                <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Início</label>
                 <input
                   type="time"
                   value={form.startTime}
                   onChange={e => setForm({ ...form, startTime: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm [color-scheme:dark]"
+                  className="w-full px-3 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm [color-scheme:dark]"
+                  required
                 />
               </div>
-            </div>
-            <div className="group">
-              <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Término</label>
-              <div className="relative">
-                <HiOutlineClock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors z-10 pointer-events-none" />
+              <div>
+                <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Fim</label>
                 <input
                   type="time"
                   value={form.endTime}
                   onChange={e => setForm({ ...form, endTime: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm [color-scheme:dark]"
+                  className="w-full px-3 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm [color-scheme:dark]"
+                  required
                 />
               </div>
             </div>
@@ -141,9 +134,9 @@ export default function EventModal({ isOpen, onClose, onSave, editingEvent, init
 
           {/* Descrição */}
           <div className="group">
-            <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Descrição (Opcional)</label>
+            <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Descrição</label>
             <div className="relative">
-              <HiOutlineMenuAlt2 className="absolute left-3 top-3 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors" />
+              <HiOutlineMenuAlt2 className="absolute left-3 top-3 w-5 h-5 text-dark-400" />
               <textarea
                 value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })}
@@ -171,6 +164,7 @@ export default function EventModal({ isOpen, onClose, onSave, editingEvent, init
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
