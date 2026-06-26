@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { 
   HiOutlineSparkles, 
@@ -93,14 +93,102 @@ export default function PostCreator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isParsingText, setIsParsingText] = useState(false);
   const [isSavingImage, setIsSavingImage] = useState(false);
+  const [isOptimizingPrompt, setIsOptimizingPrompt] = useState(false);
+  const [isAnalyzingVisuals, setIsAnalyzingVisuals] = useState(false);
+  const [visualAnalysisResult, setVisualAnalysisResult] = useState('');
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+
+  // Custom branding states
+  const [loadedFonts, setLoadedFonts] = useState([]);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [systemFonts, setSystemFonts] = useState([
+    'Arial', 'Calibri', 'Segoe UI', 'Verdana', 'Trebuchet MS', 'Times New Roman', 'Georgia', 'Garamond', 'Courier New', 'Comic Sans MS', 'Impact'
+  ]);
+
+  const loadDeviceFonts = async () => {
+    if (!('queryLocalFonts' in window)) {
+      toast.error('Seu navegador não oferece suporte à detecção de fontes locais do sistema (requer Chrome/Edge recente).');
+      return;
+    }
+    try {
+      const toastId = toast.loading('Buscando fontes instaladas no seu computador...');
+      const availableFonts = await window.queryLocalFonts();
+      const families = Array.from(new Set(availableFonts.map(f => f.family))).sort();
+      setSystemFonts(families);
+      toast.success(`${families.length} fontes locais encontradas!`, { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Permissão para listar fontes locais negada pelo navegador.', { id: 'fonts-loading' });
+    }
+  };
+
+  useEffect(() => {
+    const autoLoadFonts = async () => {
+      if ('queryLocalFonts' in window) {
+        try {
+          const availableFonts = await window.queryLocalFonts();
+          const families = Array.from(new Set(availableFonts.map(f => f.family))).sort();
+          setSystemFonts(families);
+        } catch (e) {
+          // Handled silently on startup
+        }
+      }
+    };
+    autoLoadFonts();
+  }, []);
+
+  const handleFontUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        const arrayBuffer = event.target.result;
+        const fontFace = new FontFace(fontName, arrayBuffer);
+        const loadedFace = await fontFace.load();
+        document.fonts.add(loadedFace);
+        
+        setLoadedFonts(prev => [...prev, fontName]);
+        updateSlideField(activeSlide, 'fontFamily', fontName);
+        toast.success(`Fonte '${fontName}' carregada e aplicada!`);
+      } catch (err) {
+        console.error(err);
+        toast.error('Erro ao carregar a fonte local. Verifique se o arquivo está correto.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setLogoUrl(event.target.result);
+      toast.success('Logo carregada com sucesso!');
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Dragging states
   const [draggingElement, setDraggingElement] = useState(null);
 
-  // Pollinations AI generator
+  // Pollinations AI generator with prompt enhancement for premium design assets
   const getPollinationsUrl = (prompt) => {
     if (!prompt) return '';
-    const cleanPrompt = encodeURIComponent(prompt.trim());
+    let enhancedPrompt = prompt.trim();
+    
+    // Add professional corporate tech branding style descriptors
+    const styleEnhancers = "3d render, octane render style, minimal vector graphic style, premium tech corporate aesthetic, studio lighting, white and orange accents, sleek modern design, clean solid background, 8k resolution";
+    if (!enhancedPrompt.toLowerCase().includes('render') && !enhancedPrompt.toLowerCase().includes('vector') && !enhancedPrompt.toLowerCase().includes('graphic')) {
+      enhancedPrompt = `${enhancedPrompt}, ${styleEnhancers}`;
+    }
+    
+    const cleanPrompt = encodeURIComponent(enhancedPrompt);
     return `https://image.pollinations.ai/prompt/${cleanPrompt}?width=1080&height=1080&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
   };
 
@@ -114,6 +202,87 @@ export default function PostCreator() {
     updateSlideField(index, 'imageUrl', url);
     updateSlideField(index, 'showImage', true);
     toast.success('Gerando fundo de imagem via Pollinations... (Carregando no preview)');
+  };
+
+  const handleOptimizeImagePrompt = async (index) => {
+    const currentPrompt = slides[index].imagePrompt;
+    if (!currentPrompt) {
+      toast.error('Digite um rascunho de prompt primeiro para otimizar.');
+      return;
+    }
+    
+    setIsOptimizingPrompt(true);
+    const toastId = toast.loading('Otimizando prompt de imagem com IA...');
+    try {
+      const apiKey = customGeminiKey || import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Chave API do Gemini não configurada!');
+      }
+      
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: geminiModel });
+      
+      const promptText = `Traduza para o inglês (se necessário) e enriqueça o seguinte rascunho de prompt de imagem de social media para que seja altamente descritivo e gere um resultado profissional, estético, clean, estilo vetor 3D ou render octane moderno com paleta de cores laranja/branco/cinza (marca G3Soft). Retorne APENAS o novo prompt em inglês enriquecido, sem aspas e sem explicações.
+Rascunho do usuário: "${currentPrompt}"`;
+
+      const result = await model.generateContent(promptText);
+      const optimized = result.response.text().trim();
+      updateSlideField(index, 'imagePrompt', optimized);
+      toast.success('Prompt otimizado e traduzido com sucesso!', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao otimizar prompt. Verifique suas configurações de API.', { id: toastId });
+    } finally {
+      setIsOptimizingPrompt(false);
+    }
+  };
+
+  const handleAnalyzePostVisuals = async () => {
+    if (!previewRef.current) {
+      toast.error('Visualização não carregada ainda.');
+      return;
+    }
+    const toastId = toast.loading('Capturando o post e enviando para análise visual da IA...');
+    setIsAnalyzingVisuals(true);
+    try {
+      const dataUrl = await toPng(previewRef.current, { cacheBust: true });
+      const base64Data = dataUrl.split(',')[1];
+      
+      const apiKey = customGeminiKey || import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Chave API do Gemini não configurada!');
+      }
+      
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: geminiModel });
+      
+      const prompt = `Você é um Diretor de Arte e Copywriter Sênior. Analise esta imagem gerada do post de rede social para a marca G3Soft e forneça:
+1. Avaliação de Legibilidade: O texto está legível sobre o fundo/mockup? O contraste está bom?
+2. Avaliação de Composição/Design: O layout está harmônico? A distribuição do logo, título e CTA está correta?
+3. Sugestões de Melhorias: Coisas práticas para mudar (ex: trocar a cor do texto, diminuir a fonte, trocar o layout, ajustar o CTA).
+
+Forneça um feedback construtivo, direto ao ponto e formatado de forma limpa em português (use markdown).`;
+      
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: "image/png"
+          }
+        }
+      ]);
+      
+      const analysisText = result.response.text();
+      setVisualAnalysisResult(analysisText);
+      setShowAnalysisModal(true);
+      toast.success('Análise de design concluída!', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao analisar o post. Verifique suas configurações de API.', { id: toastId });
+    } finally {
+      setIsAnalyzingVisuals(false);
+    }
   };
 
   const updateSlideField = (index, field, value) => {
@@ -234,7 +403,7 @@ Estrutura do JSON esperada:
       "title": "Título marcante do slide 1. Use colchetes para destacar palavras que devem virar um crachá de destaque (ex: 'Gargalo no Caixa da [Conveniência]?').",
       "subtitle": "Subtítulo curto com dados ou benefício do slide 1",
       "cta": "Chamada para ação curta (opcional)",
-      "imagePrompt": "Prompt em inglês detalhado para gerador de imagens conceituais (ex: 'laptop device on office desk, minimalist orange theme')",
+      "imagePrompt": "Detailed English prompt for high-quality professional tech illustrations, 3D renders, or minimalist vector graphics matching user context (ex: 'sleek 3D laptop, orange branding elements, modern technology background, clean minimalist design, studio lighting, octane render style')",
       "mockupType": "laptop",
       "showImage": true,
       "customBgStart": "#ea580c",
@@ -251,8 +420,12 @@ Estrutura do JSON esperada:
 }
 
 Selecione cores em Hexadecimal adequadas para a paleta nas propriedades (o padrão da G3 é Laranja como #ea580c / #f97316, mas ajuste se necessário).
-Opções de "mockupType": "laptop", "phone", "raw".
+Opções de "mockupType": "laptop", "phone", "raw", "background".
 Opções de "layout": "g3-split-card", "g3-waves-badge", "g3-comparison", "centered", "left-aligned", "custom".
+
+Instruções cruciais para a imagem:
+- Certifique-se de que os prompts de imagem gerados em 'imagePrompt' sejam criativos, descritivos, em inglês, focados em ilustrações 3D premium, vetores corporativos e designs limpos com detalhes em laranja e cinza, evitando prompts simples ou genéricos.
+- Assegure-se de que a imagem gerada funcione bem tanto como mockup quanto como imagem de fundo completo do slide.
 
 Contexto do negócio do usuário:
 Produtos:
@@ -407,6 +580,23 @@ Entrada do usuário: "${userInput}"`;
       }
       return part;
     });
+  };
+
+  const textShadowStyle = slides[activeSlide]?.mockupType === 'background'
+    ? { textShadow: '0 1px 2px rgba(0, 0, 0, 0.15)' }
+    : {};
+
+  const renderHeaderLogo = () => {
+    if (logoUrl) {
+      return <img src={logoUrl} alt="Logo" className="h-6 object-contain max-w-[120px] max-h-[28px]" />;
+    }
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-extrabold text-sm tracking-wider text-white" style={textShadowStyle}>G3SOFT</span>
+        <span className="w-[1px] h-4 bg-white/40" />
+        <span className="font-semibold text-xs text-white/90" style={textShadowStyle}>G3SMALL</span>
+      </div>
+    );
   };
 
   const activeFormatObj = postFormats.find(f => f.id === postFormat) || postFormats[0];
@@ -594,6 +784,63 @@ Entrada do usuário: "${userInput}"`;
                   </select>
                 </div>
 
+                {/* Font selector */}
+                <div className="border-t border-dark-600/30 pt-4">
+                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2.5">Fonte do Post</label>
+                  <div className="space-y-3">
+                    <select
+                      value={activeSlideObj.fontFamily || 'Inter'}
+                      onChange={e => updateSlideField(activeSlide, 'fontFamily', e.target.value)}
+                      className="w-full px-4 py-2.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500/50 transition-all cursor-pointer"
+                    >
+                      <option value="Inter">Inter (Padrão)</option>
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Poppins">Poppins</option>
+                      <option value="Roboto">Roboto</option>
+                      <option value="Playfair Display">Playfair Display</option>
+                      <optgroup label="Fontes do Dispositivo (Detectadas/Sistema)">
+                        {systemFonts.map(font => (
+                          <option key={font} value={font}>{font}</option>
+                        ))}
+                      </optgroup>
+                      {loadedFonts.length > 0 && (
+                        <optgroup label="Fontes Carregadas Manualmente">
+                          {loadedFonts.map(font => (
+                            <option key={font} value={font}>{font} (Upload)</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    
+                    {/* Local Font Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={loadDeviceFonts}
+                        type="button"
+                        className="flex-1 py-2 px-3 bg-dark-800 hover:bg-dark-700 border border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <HiOutlineSparkles className="w-4 h-4 text-brand-400" />
+                        Detectar Fontes do Dispositivo
+                      </button>
+
+                      <input
+                        type="file"
+                        accept=".ttf,.otf,.woff,.woff2"
+                        onChange={handleFontUpload}
+                        className="hidden"
+                        id="font-upload-input"
+                      />
+                      <label
+                        htmlFor="font-upload-input"
+                        className="flex-1 py-2 px-3 bg-dark-800 hover:bg-dark-700 border border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-center"
+                      >
+                        <HiOutlineUpload className="w-4 h-4 text-green-400" />
+                        Upload (.ttf/.otf)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Show/Hide Image Toggle */}
                 <div>
                   <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2.5">Modo de Exibição</label>
@@ -625,11 +872,12 @@ Entrada do usuário: "${userInput}"`;
                 {activeSlideObj.showImage !== false && (
                   <div>
                     <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2.5">Moldura da Imagem (Mockup)</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {[
                         { id: 'laptop', name: 'Notebook' },
                         { id: 'phone', name: 'Celular' },
-                        { id: 'raw', name: 'Imagem Pura' }
+                        { id: 'raw', name: 'Imagem Pura' },
+                        { id: 'background', name: 'Apenas Fundo' }
                       ].map(mock => (
                         <button
                           key={mock.id}
@@ -766,7 +1014,7 @@ Entrada do usuário: "${userInput}"`;
                       />
                       <button
                         onClick={triggerFileInput}
-                        className="w-full py-2 px-3 bg-dark-750 hover:bg-dark-700 border border-dashed border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        className="w-full py-2 px-3 bg-dark-800 hover:bg-dark-700 border border-dashed border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <HiOutlineUpload className="w-4 h-4 text-purple-400" />
                         Fazer Upload de Imagem
@@ -782,6 +1030,35 @@ Entrada do usuário: "${userInput}"`;
                     </div>
                   </div>
                 )}
+
+                {/* Brand Logo Image Upload */}
+                <div className="border-t border-dark-600/30 pt-4">
+                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2">Logo da Marca (Opcional)</label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      id="logo-upload-input"
+                      onChange={handleLogoUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="logo-upload-input"
+                      className="w-full py-2 px-3 bg-dark-800 hover:bg-dark-700 border border-dashed border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <HiOutlineUpload className="w-4 h-4 text-green-400" />
+                      Fazer Upload de Logo
+                    </label>
+                    {logoUrl && (
+                      <button
+                        onClick={() => setLogoUrl('')}
+                        className="w-full py-2 bg-red-950/40 border border-red-500/30 hover:bg-red-900/40 text-red-400 rounded-xl text-xs"
+                      >
+                        Remover Logo
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -838,9 +1115,18 @@ Entrada do usuário: "${userInput}"`;
                       type="text"
                       value={activeSlideObj.imagePrompt || ''}
                       onChange={e => updateSlideField(activeSlide, 'imagePrompt', e.target.value)}
-                      placeholder="Descreva a imagem em inglês..."
+                      placeholder="Descreva a imagem..."
                       className="flex-1 px-3 py-2 bg-dark-700/30 border border-dark-600/50 rounded-xl text-xs text-white placeholder-dark-400 focus:outline-none"
                     />
+                    <button
+                      onClick={() => handleOptimizeImagePrompt(activeSlide)}
+                      disabled={isOptimizingPrompt}
+                      type="button"
+                      className="py-2 px-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                      title="Traduzir e melhorar rascunho com IA"
+                    >
+                      {isOptimizingPrompt ? 'Melhorando...' : '✨ Otimizar'}
+                    </button>
                     <button
                       onClick={() => handleGenerateImage(activeSlide)}
                       className="py-2 px-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
@@ -862,13 +1148,23 @@ Entrada do usuário: "${userInput}"`;
               <h2 className="font-bold text-white text-base flex items-center gap-2">
                 <HiOutlineEye className="w-5 h-5 text-brand-400" /> Live Preview
               </h2>
-              <button
-                onClick={handleDownloadActiveSlide}
-                disabled={isSavingImage}
-                className="flex items-center gap-1.5 px-4 py-2 gradient-brand hover:shadow-md rounded-xl text-white text-xs font-semibold transition-all disabled:opacity-50"
-              >
-                {isSavingImage ? 'Renderizando...' : 'Baixar Imagem'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAnalyzePostVisuals}
+                  disabled={isAnalyzingVisuals || isSavingImage}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/55 border border-indigo-500/40 text-indigo-200 hover:text-white rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+                  title="Analisar legibilidade e design do post com IA"
+                >
+                  {isAnalyzingVisuals ? 'Analisando...' : '🔍 Analisar com IA'}
+                </button>
+                <button
+                  onClick={handleDownloadActiveSlide}
+                  disabled={isSavingImage}
+                  className="flex items-center gap-1.5 px-4 py-2 gradient-brand hover:shadow-md rounded-xl text-white text-xs font-semibold transition-all disabled:opacity-50"
+                >
+                  {isSavingImage ? 'Renderizando...' : 'Baixar Imagem'}
+                </button>
+              </div>
             </div>
 
             {/* Simulated Frame */}
@@ -898,6 +1194,9 @@ Entrada do usuário: "${userInput}"`;
                 id="post-card-preview"
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                style={{
+                  fontFamily: activeSlideObj.fontFamily || 'Inter'
+                }}
               >
                 
                 {/* SVG wave background pattern for g3-waves-badge */}
@@ -919,15 +1218,19 @@ Entrada do usuário: "${userInput}"`;
                     </div>
                   )}
 
-                  {/* Render Mockup Image Layer if layout is NOT split comparison or split card */}
-                  {activeSlideObj.imageUrl && activeSlideObj.showImage !== false && !['g3-split-card', 'g3-comparison'].includes(activeSlideObj.layout) && (
+                  {/* Render Mockup Image Layer if mockupType is 'background' OR (layout is NOT split/comparison and showImage is true) */}
+                  {activeSlideObj.imageUrl && activeSlideObj.showImage !== false && 
+                    (activeSlideObj.mockupType === 'background' || !['g3-split-card', 'g3-comparison'].includes(activeSlideObj.layout)) && (
                     <div className="absolute inset-0 z-0 pointer-events-none">
                       <img 
                         src={activeSlideObj.imageUrl} 
                         alt="Visual asset" 
-                        className="w-full h-full object-cover opacity-35"
+                        className="w-full h-full object-cover"
+                        style={{
+                          opacity: activeSlideObj.mockupType === 'background' ? 1.0 : 0.35
+                        }}
                       />
-                      <div className="absolute inset-0 bg-black/10" />
+                      <div className="absolute inset-0 bg-black/30" />
                     </div>
                   )}
 
@@ -938,23 +1241,22 @@ Entrada do usuário: "${userInput}"`;
                     <div className="relative z-10 w-full h-full flex flex-col md:flex-row items-stretch p-6 gap-6">
                       
                       {/* Left Side: Brand content */}
-                      <div className={`flex-1 flex flex-col justify-between py-6 ${activeSlideObj.showImage === false ? 'px-10 text-center items-center' : 'pr-2'}`}>
+                      <div className={`flex-1 flex flex-col justify-between py-6 ${(activeSlideObj.showImage === false || activeSlideObj.mockupType === 'background') ? 'px-10 text-center items-center' : 'pr-2'}`}>
                         {/* Header logo */}
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm tracking-wider text-white">G3SOFT</span>
-                          <span className="w-[1px] h-4 bg-white/40" />
-                          <span className="font-semibold text-xs text-white/90">G3SMALL</span>
-                        </div>
+                        {renderHeaderLogo()}
 
                         {/* Title & subtitle */}
                         <div className="my-auto space-y-4 pt-4">
                           <h3 
-                            className={`font-black leading-tight tracking-tight ${activeSlideObj.showImage === false ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}
-                            style={{ color: activeSlideObj.customTextColor || '#ffffff' }}
+                            className={`font-black leading-tight tracking-tight ${(activeSlideObj.showImage === false || activeSlideObj.mockupType === 'background') ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}
+                            style={{ color: activeSlideObj.customTextColor || '#ffffff', ...textShadowStyle }}
                           >
                             {renderHighlightedTitle(activeSlideObj.title)}
                           </h3>
-                          <p className={`font-semibold leading-relaxed text-white/90 opacity-90 ${activeSlideObj.showImage === false ? 'text-sm max-w-md mx-auto' : 'text-xs'}`}>
+                          <p 
+                            className={`font-semibold leading-relaxed text-white/90 opacity-90 ${(activeSlideObj.showImage === false || activeSlideObj.mockupType === 'background') ? 'text-sm max-w-md mx-auto' : 'text-xs'}`}
+                            style={textShadowStyle}
+                          >
                             {activeSlideObj.subtitle}
                           </p>
                         </div>
@@ -971,7 +1273,7 @@ Entrada do usuário: "${userInput}"`;
                       </div>
 
                       {/* Right Side: Floating Rounded White Card (Mimics G3 layout) */}
-                      {activeSlideObj.showImage !== false && (
+                      {activeSlideObj.showImage !== false && activeSlideObj.mockupType !== 'background' && (
                         <div className="flex-[1.2] bg-white rounded-[2.5rem] shadow-xl p-8 flex flex-col justify-between items-center relative overflow-hidden">
                           
                           {/* Inner mockup label */}
@@ -996,24 +1298,22 @@ Entrada do usuário: "${userInput}"`;
                   {activeSlideObj.layout === 'g3-waves-badge' && (
                     <div className="relative z-10 w-full h-full flex flex-col justify-between p-10">
                       {/* Header Logo */}
-                      <div className="flex justify-center items-center gap-2">
-                        <span className="font-extrabold text-sm tracking-wider text-white">G3SOFT</span>
-                        <span className="w-[1px] h-4 bg-white/40" />
-                        <span className="font-semibold text-xs text-white/90">G3SMALL</span>
+                      <div className="flex justify-center items-center">
+                        {renderHeaderLogo()}
                       </div>
 
                       {/* Title block with badge wraps */}
                       <div className="text-center px-4 my-2">
                         <h3 
                           className="text-xl md:text-2xl font-black leading-snug tracking-tight"
-                          style={{ color: activeSlideObj.customTextColor || '#ffffff' }}
+                          style={{ color: activeSlideObj.customTextColor || '#ffffff', ...textShadowStyle }}
                         >
                           {renderHighlightedTitle(activeSlideObj.title)}
                         </h3>
                       </div>
 
                       {/* Mockup centered */}
-                      {activeSlideObj.showImage !== false && (
+                      {activeSlideObj.showImage !== false && activeSlideObj.mockupType !== 'background' && (
                         <div className="flex-1 w-full flex items-center justify-center my-2 max-h-[45%]">
                           {renderMockupContainer(activeSlideObj)}
                         </div>
@@ -1021,7 +1321,10 @@ Entrada do usuário: "${userInput}"`;
 
                       {/* Subtitle / Footer CTA */}
                       <div className="text-center space-y-4">
-                        <p className={`font-extrabold text-white/90 leading-relaxed max-w-md mx-auto ${activeSlideObj.showImage === false ? 'text-sm' : 'text-xs'}`}>
+                        <p 
+                          className={`font-extrabold text-white/90 leading-relaxed max-w-md mx-auto ${(activeSlideObj.showImage === false || activeSlideObj.mockupType === 'background') ? 'text-sm' : 'text-xs'}`}
+                          style={textShadowStyle}
+                        >
                           {activeSlideObj.subtitle}
                         </p>
                         {activeSlideObj.cta && (
@@ -1043,9 +1346,15 @@ Entrada do usuário: "${userInput}"`;
                     <div className="relative z-10 w-full h-full flex flex-col justify-between">
                       {/* Logo header */}
                       <div className="flex justify-center items-center gap-2 py-4 bg-black/10 border-b border-white/5 select-none">
-                        <span className="font-extrabold text-xs tracking-wider text-white">G3SOFT</span>
-                        <span className="w-[1px] h-3 bg-white/35" />
-                        <span className="font-bold text-[10px] text-white/90">G3ERP</span>
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Logo" className="h-5 object-contain max-w-[100px] max-h-[22px]" />
+                        ) : (
+                          <>
+                            <span className="font-extrabold text-xs tracking-wider text-white" style={textShadowStyle}>G3SOFT</span>
+                            <span className="w-[1px] h-3 bg-white/35" />
+                            <span className="font-bold text-[10px] text-white/90" style={textShadowStyle}>G3ERP</span>
+                          </>
+                        )}
                       </div>
 
                       {/* 50/50 Body Split */}
@@ -1065,7 +1374,9 @@ Entrada do usuário: "${userInput}"`;
                         <div 
                           className="p-6 pt-8 flex flex-col justify-between items-center text-center relative"
                           style={{
-                            background: `linear-gradient(180deg, ${activeSlideObj.customBgStart || '#ea580c'} 0%, ${activeSlideObj.customBgEnd || '#f97316'} 100%)`
+                            background: activeSlideObj.mockupType === 'background'
+                              ? 'rgba(234, 88, 12, 0.8)'
+                              : `linear-gradient(180deg, ${activeSlideObj.customBgStart || '#ea580c'} 0%, ${activeSlideObj.customBgEnd || '#f97316'} 100%)`
                           }}
                         >
                           <h4 className="text-sm font-black text-white mb-4 select-none">Com G3ERP</h4>
@@ -1079,7 +1390,7 @@ Entrada do usuário: "${userInput}"`;
                       </div>
 
                       {/* Floating Overlap Mockup centered at the bottom of the split */}
-                      {activeSlideObj.showImage !== false && (
+                      {activeSlideObj.showImage !== false && activeSlideObj.mockupType !== 'background' && (
                         <div className="absolute left-1/2 bottom-8 -translate-x-1/2 w-4/5 flex justify-center max-h-[35%] z-20 pointer-events-none drop-shadow-2xl">
                           {renderMockupContainer(activeSlideObj)}
                         </div>
@@ -1101,9 +1412,13 @@ Entrada do usuário: "${userInput}"`;
                         }}
                         onPointerDown={(e) => handlePointerDown(e, 'logo')}
                       >
-                        <div className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-full text-[10px] font-bold tracking-widest uppercase">
-                          G3 SOFT
-                        </div>
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Logo" className="h-6 object-contain max-w-[120px] max-h-[28px]" />
+                        ) : (
+                          <div className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-full text-[10px] font-bold tracking-widest uppercase" style={textShadowStyle}>
+                            G3 SOFT
+                          </div>
+                        )}
                       </div>
 
                       {/* Title */}
@@ -1117,7 +1432,7 @@ Entrada do usuário: "${userInput}"`;
                         }}
                         onPointerDown={(e) => handlePointerDown(e, 'title')}
                       >
-                        <h3 className="text-xl md:text-2xl font-black leading-tight tracking-tight">
+                        <h3 className="text-xl md:text-2xl font-black leading-tight tracking-tight" style={textShadowStyle}>
                           {renderHighlightedTitle(activeSlideObj.title)}
                         </h3>
                       </div>
@@ -1133,7 +1448,7 @@ Entrada do usuário: "${userInput}"`;
                         }}
                         onPointerDown={(e) => handlePointerDown(e, 'subtitle')}
                       >
-                        <p className="text-xs opacity-90 leading-relaxed font-semibold">
+                        <p className="text-xs opacity-90 leading-relaxed font-semibold" style={textShadowStyle}>
                           {activeSlideObj.subtitle}
                         </p>
                       </div>
@@ -1165,27 +1480,22 @@ Entrada do usuário: "${userInput}"`;
 
                   {/* 5. CENTERED LAYOUT */}
                   {activeSlideObj.layout === 'centered' && (
-                    <div className="w-full h-full flex flex-col justify-between p-12">
-                      <div className="flex justify-between items-center w-full">
-                        <div 
-                          className="px-3.5 py-1.5 bg-white/10 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-bold tracking-widest uppercase"
-                          style={{ color: activeSlideObj.customTextColor || '#ffffff' }}
-                        >
-                          G3 SOFT
-                        </div>
+                    <div className="w-full h-full flex flex-col justify-between p-8 relative">
+                      <div className="flex justify-between items-center w-full relative z-10">
+                        {renderHeaderLogo()}
                       </div>
 
                       <div 
-                        className="my-auto text-center space-y-6"
+                        className="my-auto text-center space-y-6 relative z-10 p-8 rounded-[2rem] border border-white/10 backdrop-blur-md bg-black/25 shadow-xl max-w-sm mx-auto"
                         style={{ color: activeSlideObj.customTextColor || '#ffffff' }}
                       >
-                        <h3 className="text-2xl font-black leading-tight tracking-tight">
+                        <h3 className="text-2xl font-black leading-tight tracking-tight" style={textShadowStyle}>
                           {renderHighlightedTitle(activeSlideObj.title)}
                         </h3>
-                        <p className="text-xs opacity-90 leading-relaxed font-semibold max-w-sm mx-auto">
+                        <p className="text-xs opacity-90 leading-relaxed font-semibold" style={textShadowStyle}>
                           {activeSlideObj.subtitle}
                         </p>
-                        {activeSlideObj.showImage !== false && (
+                        {activeSlideObj.showImage !== false && activeSlideObj.mockupType !== 'background' && (
                           <div className="flex justify-center max-h-[140px] overflow-hidden rounded-xl">
                             {renderMockupContainer(activeSlideObj)}
                           </div>
@@ -1193,7 +1503,7 @@ Entrada do usuário: "${userInput}"`;
                       </div>
 
                       {activeSlideObj.cta && (
-                        <div className="w-full mt-auto pt-6 flex justify-center">
+                        <div className="w-full mt-auto pt-4 flex justify-center relative z-10">
                           <div 
                             className="w-full max-w-xs py-2.5 px-6 rounded-xl text-center text-[10px] font-black shadow-lg border border-white/10"
                             style={{ 
@@ -1210,27 +1520,22 @@ Entrada do usuário: "${userInput}"`;
 
                   {/* 6. LEFT ALIGNED LAYOUT */}
                   {activeSlideObj.layout === 'left-aligned' && (
-                    <div className="w-full h-full flex flex-col justify-between p-12">
-                      <div className="flex justify-between items-center w-full">
-                        <div 
-                          className="px-3.5 py-1.5 bg-white/10 backdrop-blur-md border border-white/10 rounded-full text-[10px] font-bold tracking-widest uppercase"
-                          style={{ color: activeSlideObj.customTextColor || '#ffffff' }}
-                        >
-                          G3 SOFT
-                        </div>
+                    <div className="w-full h-full flex flex-col justify-between p-8 relative">
+                      <div className="flex justify-between items-center w-full relative z-10">
+                        {renderHeaderLogo()}
                       </div>
 
                       <div 
-                        className="my-auto text-left space-y-6 pl-4 border-l-2 border-white/30"
+                        className="my-auto text-left space-y-6 pl-6 border-l-2 border-orange-500 p-8 rounded-[2rem] border border-white/10 backdrop-blur-md bg-black/25 shadow-xl max-w-sm relative z-10"
                         style={{ color: activeSlideObj.customTextColor || '#ffffff' }}
                       >
-                        <h3 className="text-2xl font-black leading-tight tracking-tight">
+                        <h3 className="text-2xl font-black leading-tight tracking-tight" style={textShadowStyle}>
                           {renderHighlightedTitle(activeSlideObj.title)}
                         </h3>
-                        <p className="text-xs opacity-90 leading-relaxed font-semibold max-w-sm">
+                        <p className="text-xs opacity-90 leading-relaxed font-semibold" style={textShadowStyle}>
                           {activeSlideObj.subtitle}
                         </p>
-                        {activeSlideObj.showImage !== false && (
+                        {activeSlideObj.showImage !== false && activeSlideObj.mockupType !== 'background' && (
                           <div className="flex justify-start max-h-[140px] overflow-hidden rounded-xl">
                             {renderMockupContainer(activeSlideObj)}
                           </div>
@@ -1238,7 +1543,7 @@ Entrada do usuário: "${userInput}"`;
                       </div>
 
                       {activeSlideObj.cta && (
-                        <div className="w-full mt-auto pt-6 flex justify-start">
+                        <div className="w-full mt-auto pt-4 flex justify-start relative z-10">
                           <div 
                             className="w-full max-w-xs py-2.5 px-6 rounded-xl text-center text-[10px] font-black shadow-lg border border-white/10"
                             style={{ 
@@ -1305,8 +1610,8 @@ Entrada do usuário: "${userInput}"`;
 
                 {/* Likes & Caption */}
                 <div className="text-xs text-white">
-                  <div className="font-semibold mb-1">Curtido por g3soft_oficial e outras 42 pessoas</div>
-                  <div className="space-y-1.5 leading-relaxed text-dark-200">
+                  <div className="font-semibold mb-1 text-slate-100">Curtido por g3soft_oficial e outras 42 pessoas</div>
+                  <div className="space-y-1.5 leading-relaxed text-slate-100">
                     <span className="font-semibold text-white mr-2">g3soft_oficial</span>
                     <span className="whitespace-pre-line">{caption}</span>
                   </div>
@@ -1331,18 +1636,56 @@ Entrada do usuário: "${userInput}"`;
               <textarea
                 value={caption}
                 onChange={e => setCaption(e.target.value)}
-                className="w-full px-4 py-3 bg-dark-750 border border-dark-600/50 rounded-xl text-white text-xs placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all h-28 resize-none"
+                className="w-full px-4 py-3 bg-dark-800 border border-dark-600/50 rounded-xl text-white text-xs placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all h-28 resize-none"
               />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Visual Analysis Modal */}
+      {showAnalysisModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-dark-800 border border-dark-600 rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-dark-600/30 pb-3">
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                <HiOutlineSparkles className="w-5 h-5 text-indigo-400 animate-pulse-slow" />
+                Análise Visual por IA (Diretor de Arte)
+              </h3>
+              <button 
+                onClick={() => setShowAnalysisModal(false)}
+                className="text-dark-300 hover:text-white transition-colors text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="max-h-[350px] overflow-y-auto pr-2 scrollbar-thin text-dark-100 text-xs leading-relaxed whitespace-pre-wrap space-y-2">
+              <div className="prose prose-invert max-w-none text-slate-300">
+                {visualAnalysisResult}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-dark-600/30">
+              <button
+                onClick={() => setShowAnalysisModal(false)}
+                className="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-xl text-xs font-bold transition-all"
+              >
+                Fechar Análise
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // Render device frame mockups (Laptop or Phone wrapper)
 function renderMockupContainer(slideObj) {
+  if (slideObj.mockupType === 'background') {
+    return null;
+  }
   if (!slideObj.imageUrl) {
     return (
       <div className="w-full h-32 bg-neutral-100 border border-dashed border-neutral-300 rounded-2xl flex items-center justify-center text-xs text-neutral-400 select-none font-semibold">
