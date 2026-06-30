@@ -42,9 +42,12 @@ export default function IdeaPreview() {
   const [postModalOpen, setPostModalOpen] = useState(false);
   const [promoPost, setPromoPost] = useState(null);
 
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
+
   useEffect(() => {
     setIsEditing(false);
     setEditForm(null);
+    setActiveSlideIdx(0);
   }, [selectedIdea]);
 
   // Load ideas on mount
@@ -676,14 +679,19 @@ Crie ideias com base no seguinte briefing ou tema:
             <div className="flex flex-wrap items-center justify-between border-b border-dark-600/50 px-6 py-4 gap-4 bg-dark-850/80">
               <div className="flex gap-2 p-1 bg-dark-900/60 border border-dark-600/30 rounded-xl">
                 <button
-                  onClick={() => setActivePreviewTab('image')}
+                  onClick={() => {
+                    setActivePreviewTab('image');
+                    setActiveSlideIdx(0);
+                  }}
                   className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     activePreviewTab === 'image'
                       ? 'bg-brand-500 text-white shadow-md'
                       : 'text-dark-350 hover:text-white'
                   }`}
                 >
-                  Imagem Montada (1:1)
+                  {selectedIdea.tipo === 'carrossel' ? 'Carrossel Montado (1:1)' : 
+                   (selectedIdea.tipo === 'video' || selectedIdea.tipo === 'reels') ? 'Roteiro Reels' : 
+                   'Imagem Montada (1:1)'}
                 </button>
                 <button
                   onClick={() => setActivePreviewTab('instagram')}
@@ -786,81 +794,240 @@ Crie ideias com base no seguinte briefing ou tema:
             {/* TAB CONTENT AREAS */}
             <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center min-h-[480px]">
               
-              {/* TAB 1: PREMIUM SQUARE POST DESIGN */}
+              {/* TAB 1: PREMIUM SQUARE POST OR CAROUSEL OR REELS ROADMAP */}
               {activePreviewTab === 'image' && (
-                <div className="w-full max-w-[460px] aspect-square relative shadow-2xl rounded-2xl overflow-hidden border border-white/5 bg-slate-950" ref={imagePreviewRef}>
-                  {/* Premium Brand Gradients */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950" />
-                  <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-                  <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
-                  
-                  {/* Frame Border Details */}
-                  <div className="absolute inset-4 border border-white/5 rounded-xl pointer-events-none" />
-                  
-                  {/* Layout Grid */}
-                  <div className="absolute inset-0 p-8 flex flex-col justify-between z-10 text-left">
-                    {/* Header */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center shadow-lg shadow-brand-500/20">
-                          <span className="text-white font-black text-sm">G3</span>
+                selectedIdea.tipo === 'carrossel' ? (
+                  <div className="w-full max-w-[460px] aspect-square relative shadow-2xl rounded-2xl overflow-hidden border border-white/5 bg-slate-950" ref={imagePreviewRef}>
+                    {/* Premium Brand Gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950" />
+                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                    <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
+                    
+                    {/* Frame Border Details */}
+                    <div className="absolute inset-4 border border-white/5 rounded-xl pointer-events-none" />
+                    
+                    {/* Layout Grid */}
+                    <div className="absolute inset-0 p-8 flex flex-col justify-between z-10 text-left">
+                      {/* Header */}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center shadow-lg shadow-brand-500/20">
+                            <span className="text-white font-black text-sm">G3</span>
+                          </div>
+                          <span className="text-white/80 font-bold text-xs uppercase tracking-wider">Softwares</span>
                         </div>
-                        <span className="text-white/80 font-bold text-xs uppercase tracking-wider">Softwares</span>
-                      </div>
-                      
-                      {/* Product Tag */}
-                      <span className="px-3 py-1 bg-white/5 backdrop-blur border border-white/10 rounded-full text-white/90 font-black text-[10px] tracking-widest uppercase">
-                        {selectedIdea.produto}
-                      </span>
-                    </div>
-
-                    {/* Content Body */}
-                    <div className="flex flex-col gap-4 my-auto">
-                      {/* Sub-header themed indicator */}
-                      {selectedIdea.especial && (
-                        <span className="text-brand-400 font-extrabold text-[11px] uppercase tracking-wider">
-                          ✦ {selectedIdea.especial}
+                        
+                        <span className="px-3 py-1 bg-white/5 backdrop-blur border border-white/10 rounded-full text-white/90 font-black text-[10px] tracking-widest uppercase">
+                          {selectedIdea.produto}
                         </span>
-                      )}
-                      
-                      {/* Main Title */}
-                      <h2 className="text-white font-black text-2xl leading-tight tracking-tight drop-shadow-md">
-                        {selectedIdea.titulo}
-                      </h2>
-
-                      {/* Hook statement */}
-                      {selectedIdea.hook && (
-                        <p className="text-slate-300 text-[11px] leading-relaxed border-l-2 border-brand-500 pl-3 py-1 font-medium bg-white/[0.02] rounded-r-lg">
-                          {selectedIdea.hook}
-                        </p>
-                      )}
-
-                      {/* Facilidades (Highlights) rendered in sleek glass cards */}
-                      {selectedIdea.facilidades && selectedIdea.facilidades.length > 0 && (
-                        <div className="space-y-2 mt-2">
-                          {selectedIdea.facilidades.map((item, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 bg-white/[0.03] backdrop-blur-md border border-white/5 rounded-xl hover:bg-white/[0.05] transition-all">
-                              <span className="text-lg flex-shrink-0">{item.icone}</span>
-                              <span className="text-white/90 text-xs leading-normal font-semibold">
-                                {item.texto}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Footer / CTA banner */}
-                    <div className="flex justify-between items-center border-t border-white/5 pt-4">
-                      <div className="text-[10px] text-white/50 font-bold tracking-wide">
-                        {selectedIdea.tipo.toUpperCase()} POST
                       </div>
-                      <div className="px-3 py-1.5 bg-gradient-to-r from-brand-500 to-indigo-500 rounded-lg text-white font-extrabold text-[10px] tracking-wide shadow-md shadow-brand-500/20">
-                        {selectedIdea.cta ? selectedIdea.cta.split('—')[0].trim() : 'Saiba Mais'}
+
+                      {/* Content Slides */}
+                      <div className="my-auto min-h-[180px] flex flex-col justify-center">
+                        {activeSlideIdx === 0 && (
+                          <div className="flex flex-col gap-4 animate-fade-in">
+                            {selectedIdea.especial && (
+                              <span className="text-brand-400 font-extrabold text-[11px] uppercase tracking-wider">
+                                ✦ {selectedIdea.especial} (Capa)
+                              </span>
+                            )}
+                            <h2 className="text-white font-black text-2xl leading-tight tracking-tight drop-shadow-md">
+                              {selectedIdea.titulo}
+                            </h2>
+                            {selectedIdea.hook && (
+                              <p className="text-slate-300 text-[11px] leading-relaxed border-l-2 border-brand-500 pl-3 py-1 font-medium bg-white/[0.02] rounded-r-lg">
+                                {selectedIdea.hook}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {activeSlideIdx > 0 && activeSlideIdx <= (selectedIdea.facilidades?.length || 0) && (
+                          <div className="flex flex-col items-center text-center gap-4 animate-fade-in px-4">
+                            <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-widest">
+                              Destaque {activeSlideIdx}
+                            </span>
+                            <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-3xl shadow-lg shadow-brand-500/5">
+                              {selectedIdea.facilidades[activeSlideIdx - 1]?.icone}
+                            </div>
+                            <p className="text-white text-base font-bold leading-relaxed max-w-sm">
+                              {selectedIdea.facilidades[activeSlideIdx - 1]?.texto}
+                            </p>
+                          </div>
+                        )}
+
+                        {activeSlideIdx === ((selectedIdea.facilidades?.length || 0) + 1) && (
+                          <div className="flex flex-col items-center text-center gap-5 animate-fade-in px-4">
+                            <span className="text-[10px] text-brand-400 font-extrabold uppercase tracking-widest">
+                              Próximo Passo
+                            </span>
+                            <h3 className="text-white font-black text-xl leading-snug">
+                              Pronto para transformar sua empresa?
+                            </h3>
+                            <div className="px-5 py-3 bg-gradient-to-r from-brand-500 to-indigo-500 rounded-xl text-white font-black text-xs tracking-wider shadow-lg shadow-brand-500/20">
+                              {selectedIdea.cta ? selectedIdea.cta.split('—')[0].trim() : 'Saiba Mais'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer / Controls */}
+                      <div className="flex justify-between items-center border-t border-white/5 pt-4">
+                        <div className="text-[10px] text-white/50 font-bold tracking-wide">
+                          CARROSSEL (SLIDE {activeSlideIdx + 1}/{selectedIdea.facilidades.length + 2})
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={activeSlideIdx === 0}
+                            onClick={() => setActiveSlideIdx(prev => prev - 1)}
+                            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            disabled={activeSlideIdx === (selectedIdea.facilidades.length + 1)}
+                            onClick={() => setActiveSlideIdx(prev => prev + 1)}
+                            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
+                          >
+                            ›
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (selectedIdea.tipo === 'video' || selectedIdea.tipo === 'reels') ? (
+                  <div className="w-full max-w-[310px] aspect-[9/16] bg-dark-900 border border-dark-600/50 rounded-3xl overflow-hidden shadow-2xl relative flex flex-col justify-between p-5 text-left">
+                    <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 z-0" />
+                    
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10 text-[9px] font-mono text-emerald-400">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                        REC [00:15]
+                      </span>
+                      <span>1080p 60FPS</span>
+                    </div>
+
+                    <div className="my-auto z-10 flex flex-col gap-4 mt-6">
+                      <div className="border-b border-white/15 pb-2">
+                        <h4 className="text-white font-extrabold text-xs tracking-wider uppercase text-brand-400">
+                          Roteiro Reels: {selectedIdea.produto}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 italic">Objetivo: {selectedIdea.objetivo}</p>
+                      </div>
+
+                      <div className="space-y-3.5 max-h-[340px] overflow-y-auto pr-1">
+                        <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                          <span className="text-[9px] font-black text-red-400 uppercase tracking-widest block mb-1">Cena 1: Gancho (0s - 3s)</span>
+                          <p className="text-xs text-white font-bold leading-relaxed">
+                            "{selectedIdea.hook || selectedIdea.titulo}"
+                          </p>
+                          <span className="text-[8px] text-slate-400 block mt-1">💡 Dica: Fale olhando direto na câmera com energia.</span>
+                        </div>
+
+                        <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
+                          <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Cena 2: Conteúdo (3s - 12s)</span>
+                          <div className="text-xs text-white leading-relaxed font-medium space-y-1">
+                            <p className="text-slate-300 text-[10px] italic">Fale os pontos de destaque mostrando o sistema:</p>
+                            {selectedIdea.facilidades && selectedIdea.facilidades.length > 0 ? (
+                              selectedIdea.facilidades.map((f, i) => (
+                                <p key={i}>• "{f.texto}"</p>
+                              ))
+                            ) : (
+                              <p>"{selectedIdea.copy.substring(0, 100)}..."</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                          <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Cena 3: CTA Final (12s - 15s)</span>
+                          <p className="text-xs text-white font-bold leading-relaxed">
+                            "Comenta {selectedIdea.cta ? selectedIdea.cta.split('—')[0].replace('Comenta', '').trim() : 'ERP'} no direct que te envio o link!"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="z-10 border-t border-white/10 pt-3 flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      <span>Roteiro de Vídeo</span>
+                      <span className="text-brand-400 font-extrabold">Reels / TikTok</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full max-w-[460px] aspect-square relative shadow-2xl rounded-2xl overflow-hidden border border-white/5 bg-slate-950" ref={imagePreviewRef}>
+                    {/* Premium Brand Gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950" />
+                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+                    <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
+                    
+                    {/* Frame Border Details */}
+                    <div className="absolute inset-4 border border-white/5 rounded-xl pointer-events-none" />
+                    
+                    {/* Layout Grid */}
+                    <div className="absolute inset-0 p-8 flex flex-col justify-between z-10 text-left">
+                      {/* Header */}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center shadow-lg shadow-brand-500/20">
+                            <span className="text-white font-black text-sm">G3</span>
+                          </div>
+                          <span className="text-white/80 font-bold text-xs uppercase tracking-wider">Softwares</span>
+                        </div>
+                        
+                        {/* Product Tag */}
+                        <span className="px-3 py-1 bg-white/5 backdrop-blur border border-white/10 rounded-full text-white/90 font-black text-[10px] tracking-widest uppercase">
+                          {selectedIdea.produto}
+                        </span>
+                      </div>
+
+                      {/* Content Body */}
+                      <div className="flex flex-col gap-4 my-auto">
+                        {/* Sub-header themed indicator */}
+                        {selectedIdea.especial && (
+                          <span className="text-brand-400 font-extrabold text-[11px] uppercase tracking-wider">
+                            ✦ {selectedIdea.especial}
+                          </span>
+                        )}
+                        
+                        {/* Main Title */}
+                        <h2 className="text-white font-black text-2xl leading-tight tracking-tight drop-shadow-md">
+                          {selectedIdea.titulo}
+                        </h2>
+
+                        {/* Hook statement */}
+                        {selectedIdea.hook && (
+                          <p className="text-slate-300 text-[11px] leading-relaxed border-l-2 border-brand-500 pl-3 py-1 font-medium bg-white/[0.02] rounded-r-lg">
+                            {selectedIdea.hook}
+                          </p>
+                        )}
+
+                        {/* Facilidades (Highlights) rendered in sleek glass cards */}
+                        {selectedIdea.facilidades && selectedIdea.facilidades.length > 0 && (
+                          <div className="space-y-2 mt-2">
+                            {selectedIdea.facilidades.map((item, index) => (
+                              <div key={index} className="flex items-center gap-3 p-3 bg-white/[0.03] backdrop-blur-md border border-white/5 rounded-xl hover:bg-white/[0.05] transition-all">
+                                <span className="text-lg flex-shrink-0">{item.icone}</span>
+                                <span className="text-white/90 text-xs leading-normal font-semibold">
+                                  {item.texto}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer / CTA banner */}
+                      <div className="flex justify-between items-center border-t border-white/5 pt-4">
+                        <div className="text-[10px] text-white/50 font-bold tracking-wide">
+                          {selectedIdea.tipo.toUpperCase()} POST
+                        </div>
+                        <div className="px-3 py-1.5 bg-gradient-to-r from-brand-500 to-indigo-500 rounded-lg text-white font-extrabold text-[10px] tracking-wide shadow-md shadow-brand-500/20">
+                          {selectedIdea.cta ? selectedIdea.cta.split('—')[0].trim() : 'Saiba Mais'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* TAB 2: INSTAGRAM FEED POST PREVIEW */}
