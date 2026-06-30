@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import DashboardQuickChat from '../components/DashboardQuickChat';
 import { fetchAllMetrics } from '../services/apiService';
 import { toast } from 'react-hot-toast';
 // import { mockMetrics } from '../data/mockData';
@@ -324,6 +325,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <DashboardQuickChat />
     </div>
   );
 }
