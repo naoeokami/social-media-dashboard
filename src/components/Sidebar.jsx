@@ -14,6 +14,7 @@ import {
   HiOutlineClock,
   HiOutlineQrcode,
   HiOutlineTemplate,
+  HiOutlineEye,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -22,12 +23,13 @@ const navItems = [
   { path: '/cronograma', label: 'Cronograma', icon: HiOutlineClock },
   { path: '/aprovacao', label: 'Aprovação', icon: HiOutlineCheckCircle },
   { path: '/swipe-file', label: 'Swipe File', icon: HiOutlineLightBulb },
+  { path: '/visualizacao-ideia', label: 'Visualização de Ideia', icon: HiOutlineEye },
   // { path: '/relatorios', label: 'Relatórios', icon: HiOutlineChartBar }, // Em desenvolvimento
   { path: '/tarefas', label: 'Guia de Tarefas', icon: HiOutlineClipboardList },
   { path: '/produtos', label: 'Produtos e Segmentos', icon: HiOutlineShoppingBag },
   { path: '/comandas', label: 'Gerar Comandas', icon: HiOutlineQrcode },
   { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles },
-  { path: '/criador-post', label: 'Criador Visual', icon: HiOutlineTemplate },
+  // { path: '/criador-post', label: 'Criador Visual', icon: HiOutlineTemplate },
 ];
 
 export default function Sidebar() {

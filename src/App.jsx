@@ -15,6 +15,7 @@ import PostCreator from './pages/PostCreator';
 import Login from './pages/Login';
 import Comandas from './pages/Comandas';
 import ResetPassword from './pages/ResetPassword';
+import IdeaPreview from './pages/IdeaPreview';
 import { useApp } from './contexts/AppContext';
 import PostStatusModal from './components/PostStatusModal';
 
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/cronograma" element={<Schedule />} />
             <Route path="/aprovacao" element={<Approval />} />
             <Route path="/swipe-file" element={<SwipeFile />} />
+            <Route path="/visualizacao-ideia" element={<IdeaPreview />} />
             <Route path="/relatorios" element={<Reports />} />
             <Route path="/tarefas" element={<Tasks />} />
             <Route path="/produtos" element={<Products />} />
