@@ -399,6 +399,7 @@ export function AppProvider({ children }) {
 
   // Alert user of the next scheduled activity whenever schedules change
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/gerador-de-comandas') return;
     if (!schedules || schedules.length === 0) return;
 
     const findNextActivity = (list) => {
@@ -445,6 +446,7 @@ export function AppProvider({ children }) {
 
   // Alert user of events happening tomorrow
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/gerador-de-comandas') return;
     if (!events || events.length === 0) return;
 
     const tomorrow = new Date();

@@ -23,10 +23,7 @@ import { supabase, hasSupabaseConfig } from '../lib/supabase';
 import { useApp } from '../contexts/AppContext';
 
 export default function Comandas({ minimal = false }) {
-  const { user } = useApp();
-  const [activeTab, setActiveTab] = useState('gerar');
-  const [history, setHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const activeTab = 'gerar';
 
   const [template, setTemplate] = useState(null);
   const [versoTemplate, setVersoTemplate] = useState(null);
@@ -87,58 +84,7 @@ export default function Comandas({ minimal = false }) {
   const [previewVersoDataUrl, setPreviewVersoDataUrl] = useState(null);
   const [isMobilePreviewExpanded, setIsMobilePreviewExpanded] = useState(false);
 
-  useEffect(() => {
-    if (activeTab === 'historico') {
-      fetchHistory();
-    }
-  }, [activeTab, user]);
-
-  const fetchHistory = async () => {
-    if (!hasSupabaseConfig || !user) return;
-    setLoadingHistory(true);
-    try {
-      const { data: historyData, error } = await supabase
-        .from('comandas_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        if (error.code !== '42P01') console.error(error); // Ignores "relation does not exist" gracefully
-      } else {
-        setHistory(historyData || []);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
-
-  const handleDeleteHistory = async (id, fileUrl) => {
-    if (!confirm('Tem certeza que deseja apagar este histórico?')) return;
-    try {
-      // 1. Delete from DB
-      await supabase.from('comandas_history').delete().eq('id', id);
-      
-      // 2. Extract path from url and try deleting from storage
-      try {
-        const urlParts = fileUrl.split('/storage/v1/object/public/comandas/');
-        if (urlParts.length > 1) {
-          const path = urlParts[1];
-          await supabase.storage.from('comandas').remove([path]);
-        }
-      } catch (e) {
-        console.error('Failed to remove from storage, maybe already gone.', e);
-      }
-      
-      setHistory(prev => prev.filter(h => h.id !== id));
-      toast.success('Histórico apagado.');
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao apagar histórico.');
-    }
-  };
+  // History logic removed to keep comanda generator fully offline/client-side
 
   const handleTemplateUpload = (e) => {
     const file = e.target.files[0];
@@ -276,6 +222,10 @@ export default function Comandas({ minimal = false }) {
           ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
           resolve();
         };
+        img.onerror = () => {
+          console.error("Erro ao carregar imagem do template");
+          resolve();
+        };
       });
     } else {
       ctx.fillStyle = '#ffffff';
@@ -367,30 +317,42 @@ export default function Comandas({ minimal = false }) {
   };
 
   useEffect(() => {
+    let active = true;
+
     const updatePreview = async () => {
-      if (!canvasRef.current) return;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      
       const sampleItem = data.length > 0 ? data[0] : { numero: '001', link: 'https://exemplo.com', controle: 'c001' };
       
-      // Update Front Preview (using scale 150 for responsiveness)
-      canvas.width = pageWidth * 150;
-      canvas.height = pageHeight * 150;
-      await drawCard(ctx, canvas.width, canvas.height, sampleItem, settings, 'frente');
-      setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.9));
+      // 1. Render Front Side (Frente)
+      const canvasFrente = document.createElement('canvas');
+      canvasFrente.width = pageWidth * 150;
+      canvasFrente.height = pageHeight * 150;
+      const ctxFrente = canvasFrente.getContext('2d');
+      await drawCard(ctxFrente, canvasFrente.width, canvasFrente.height, sampleItem, settings, 'frente');
       
-      // Update Verso Preview if enabled
+      if (!active) return;
+      setPreviewDataUrl(canvasFrente.toDataURL('image/jpeg', 0.9));
+      
+      // 2. Render Back Side (Verso)
       if (hasVerso) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        await drawCard(ctx, canvas.width, canvas.height, sampleItem, settings, 'verso');
-        setPreviewVersoDataUrl(canvas.toDataURL('image/jpeg', 0.9));
+        const canvasVerso = document.createElement('canvas');
+        canvasVerso.width = pageWidth * 150;
+        canvasVerso.height = pageHeight * 150;
+        const ctxVerso = canvasVerso.getContext('2d');
+        await drawCard(ctxVerso, canvasVerso.width, canvasVerso.height, sampleItem, settings, 'verso');
+        
+        if (!active) return;
+        setPreviewVersoDataUrl(canvasVerso.toDataURL('image/jpeg', 0.9));
       } else {
+        if (!active) return;
         setPreviewVersoDataUrl(null);
       }
     };
     
     updatePreview();
+
+    return () => {
+      active = false;
+    };
   }, [template, versoTemplate, hasVerso, versoCodeType, data, settings, pageWidth, pageHeight, exportOnlyQR, codeType, dataSource]);
 
   useEffect(() => {
@@ -514,31 +476,7 @@ export default function Comandas({ minimal = false }) {
         const pdfBlob = pdf.output('blob');
         saveAs(pdfBlob, `comandas_${safeFilename}.pdf`);
 
-        // Attempt to save to Supabase
-        if (hasSupabaseConfig && user) {
-          toast.loading('Salvando no histórico...', { id: loadingToast });
-          const storagePath = `${user.id}/${Date.now()}_${safeFilename}.pdf`;
-
-          const { error: uploadError } = await supabase.storage.from('comandas').upload(storagePath, pdfBlob, {
-            contentType: 'application/pdf',
-            upsert: false
-          });
-
-          if (uploadError) {
-            console.error("Storage upload error:", uploadError);
-            toast.error('PDF baixado, mas não salvo no storage do Supabase.', { id: loadingToast, duration: 6000 });
-          } else {
-            const { data: { publicUrl } } = supabase.storage.from('comandas').getPublicUrl(storagePath);
-            await supabase.from('comandas_history').insert({
-              user_id: user.id,
-              name: docName,
-              file_url: publicUrl
-            });
-            toast.success('PDF gerado e salvo com sucesso!', { id: loadingToast });
-          }
-        } else {
-          toast.success('PDF gerado com sucesso!', { id: loadingToast });
-        }
+        toast.success('PDF gerado com sucesso!', { id: loadingToast });
 
       } else {
         // Handle ZIP (.png)
@@ -650,28 +588,7 @@ export default function Comandas({ minimal = false }) {
         </div>
       )}
 
-      {/* Modern Tab System */}
-      {!minimal && (
-        <div className="flex p-1.5 rounded-2xl bg-dark-800/50 border border-dark-600/30 w-fit glass">
-          {[
-            { id: 'gerar', label: 'Gerador Principal', icon: HiOutlineViewGrid },
-            { id: 'historico', label: 'Histórico de Lotes', icon: HiOutlineViewList }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-brand-500 text-white shadow-lg glow-brand' 
-                  : 'text-dark-400 hover:text-white hover:bg-dark-700/50'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Tab system removed */}
 
       {/* Step Indicator (Only in Generator) */}
       {activeTab === 'gerar' && (
@@ -1535,72 +1452,7 @@ export default function Comandas({ minimal = false }) {
         </>
       )}
 
-      {activeTab === 'historico' && (
-        <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-600/50 rounded-xl p-6 shadow-xl animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-white">Histórico de Comandas Geradas</h2>
-            <button 
-              onClick={fetchHistory}
-              disabled={loadingHistory}
-              className="p-2 text-dark-300 hover:text-white bg-dark-700/50 hover:bg-dark-600/50 rounded-lg transition-colors"
-            >
-              <HiOutlineRefresh className={`w-5 h-5 ${loadingHistory ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-
-          {!hasSupabaseConfig && (
-             <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-6">
-               <p className="text-orange-400 text-sm">Supabase não configurado. O histórico não estará disponível.</p>
-             </div>
-          )}
-
-          {loadingHistory ? (
-             <div className="py-12 flex justify-center">
-                <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-             </div>
-          ) : history.length === 0 ? (
-            <div className="py-16 text-center flex flex-col items-center justify-center">
-              <HiOutlineCollection className="w-16 h-16 text-dark-500 mb-4" />
-              <h3 className="text-dark-200 font-medium">Nenhum PDF no histórico ainda.</h3>
-              <p className="text-dark-400 text-sm mt-1">Gere sua primeira comanda para vê-la aqui.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {history.map(item => (
-                <div key={item.id} className="bg-dark-700/30 border border-dark-600/50 p-4 rounded-xl flex flex-col justify-between group hover:border-brand-500/50 transition-colors">
-                  <div>
-                    <h3 className="text-white font-medium mb-1 truncate" title={item.name}>{item.name}</h3>
-                    <p className="text-xs text-dark-400 mb-4">
-                      {new Date(item.created_at).toLocaleDateString('pt-BR', { 
-                         day: '2-digit', month: 'short', year: 'numeric',
-                         hour: '2-digit', minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <a 
-                      href={item.file_url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      <HiOutlineExternalLink className="w-4 h-4" />
-                      Visualizar PDF
-                    </a>
-                    <button
-                      onClick={() => handleDeleteHistory(item.id, item.file_url)}
-                      className="p-2 text-dark-400 hover:text-red-400 bg-dark-800 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
-                      title="Apagar do Histórico"
-                    >
-                      <HiOutlineTrash className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* History DOM block removed */}
 
       {/* Modal para Nomear o Lote */}
       {isModalOpen && (
