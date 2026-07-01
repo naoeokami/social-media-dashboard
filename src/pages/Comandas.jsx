@@ -29,6 +29,12 @@ export default function Comandas({ minimal = false }) {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   const [template, setTemplate] = useState(null);
+  const [versoTemplate, setVersoTemplate] = useState(null);
+  const [hasVerso, setHasVerso] = useState(false);
+  const [versoCodeType, setVersoCodeType] = useState('none'); // 'qr', 'barcode', 'none'
+  const [versoExportMode, setVersoExportMode] = useState('alternado'); // 'alternado', 'por_verso'
+  const [previewSide, setPreviewSide] = useState('frente'); // 'frente', 'verso'
+  
   const [data, setData] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,7 +61,21 @@ export default function Comandas({ minimal = false }) {
     boxX: 50,
     boxHeight: 50,
     boxY: 38,
-    boxRadius: 5
+    boxRadius: 5,
+    
+    // Verso Settings
+    versoQrSize: 50,
+    versoQrX: 50,
+    versoQrY: 42,
+    versoTextX: 50,
+    versoTextY: 80,
+    versoFontSize: 0, // 0 means do not draw text by default on back
+    versoDrawWhiteBox: true,
+    versoBoxWidth: 62,
+    versoBoxX: 50,
+    versoBoxHeight: 50,
+    versoBoxY: 38,
+    versoBoxRadius: 5
   });
 
   const [exportOnlyQR, setExportOnlyQR] = useState(false);
@@ -64,6 +84,8 @@ export default function Comandas({ minimal = false }) {
   const [exportFormat, setExportFormat] = useState('pdf'); // 'pdf' or 'zip'
 
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
+  const [previewVersoDataUrl, setPreviewVersoDataUrl] = useState(null);
+  const [isMobilePreviewExpanded, setIsMobilePreviewExpanded] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'historico') {
@@ -140,6 +162,20 @@ export default function Comandas({ minimal = false }) {
     e.target.value = null;
   };
 
+  const handleVersoTemplateUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target.result;
+      setVersoTemplate(dataUrl);
+      setHasVerso(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = null;
+  };
+
   const handleExcelUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -200,21 +236,41 @@ export default function Comandas({ minimal = false }) {
     e.target.value = null;
   };
 
-  // Helper to draw a single card
-  const drawCard = async (ctx, canvasWidth, canvasHeight, itemData, currentSettings) => {
-    // Calculo de porcentagens para Pixels absolutos usando o tamanho da página
-    const qrPx = (currentSettings.qrSize / 100) * canvasWidth;
-    const fontPx = (currentSettings.fontSize / 100) * canvasHeight;
-    const boxWPx = (currentSettings.boxWidth / 100) * canvasWidth;
-    const boxHPx = (currentSettings.boxHeight / 100) * canvasHeight;
-    const boxXPx = (currentSettings.boxX / 100) * canvasWidth - (boxWPx / 2);
-    const boxYPx = (currentSettings.boxY / 100) * canvasHeight - (boxHPx / 2);
-    const boxRadiusPx = (currentSettings.boxRadius / 100) * canvasWidth;
+  // Helper to draw a single card side (frente or verso)
+  const drawCard = async (ctx, canvasWidth, canvasHeight, itemData, currentSettings, side = 'frente') => {
+    const isVerso = side === 'verso';
+    
+    // Choose appropriate values based on side
+    const currentTemplate = isVerso ? versoTemplate : template;
+    const currentCodeType = isVerso ? versoCodeType : codeType;
+    
+    // Position/sizing settings
+    const qrSize = isVerso ? currentSettings.versoQrSize : currentSettings.qrSize;
+    const qrX = isVerso ? currentSettings.versoQrX : currentSettings.qrX;
+    const qrY = isVerso ? currentSettings.versoQrY : currentSettings.qrY;
+    const textX = isVerso ? currentSettings.versoTextX : currentSettings.textX;
+    const textY = isVerso ? currentSettings.versoTextY : currentSettings.textY;
+    const fontSize = isVerso ? currentSettings.versoFontSize : currentSettings.fontSize;
+    const drawWhiteBox = isVerso ? currentSettings.versoDrawWhiteBox : currentSettings.drawWhiteBox;
+    const boxWidth = isVerso ? currentSettings.versoBoxWidth : currentSettings.boxWidth;
+    const boxHeight = isVerso ? currentSettings.versoBoxHeight : currentSettings.boxHeight;
+    const boxX = isVerso ? currentSettings.versoBoxX : currentSettings.boxX;
+    const boxY = isVerso ? currentSettings.versoBoxY : currentSettings.boxY;
+    const boxRadius = isVerso ? currentSettings.versoBoxRadius : currentSettings.boxRadius;
 
-    // 1. Draw Template (Skip if exportOnlyQR is true)
-    if (template && !exportOnlyQR) {
+    // Calculation in absolute pixels
+    const qrPx = (qrSize / 100) * canvasWidth;
+    const fontPx = (fontSize / 100) * canvasHeight;
+    const boxWPx = (boxWidth / 100) * canvasWidth;
+    const boxHPx = (boxHeight / 100) * canvasHeight;
+    const boxXPx = (boxX / 100) * canvasWidth - (boxWPx / 2);
+    const boxYPx = (boxY / 100) * canvasHeight - (boxHPx / 2);
+    const boxRadiusPx = (boxRadius / 100) * canvasWidth;
+
+    // 1. Draw Template (Skip if exportOnlyQR is true and side is frente)
+    if (currentTemplate && (!exportOnlyQR || isVerso)) {
       const img = new Image();
-      img.src = template;
+      img.src = currentTemplate;
       await new Promise((resolve) => {
         img.onload = () => {
           ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
@@ -226,8 +282,8 @@ export default function Comandas({ minimal = false }) {
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     }
 
-    // 2. Draw White Box (Skip if exportOnlyQR is true)
-    if (currentSettings.drawWhiteBox && !exportOnlyQR) {
+    // 2. Draw White Box (Skip if exportOnlyQR is true and side is frente)
+    if (drawWhiteBox && (!exportOnlyQR || isVerso) && currentCodeType !== 'none') {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.moveTo(boxXPx + boxRadiusPx, boxYPx);
@@ -245,9 +301,9 @@ export default function Comandas({ minimal = false }) {
 
     // 3. Draw QR Code or Barcode
     const content = dataSource === 'link' ? itemData?.link : itemData?.controle;
-    if (itemData && content) {
+    if (itemData && content && currentCodeType !== 'none') {
       try {
-        if (codeType === 'qr') {
+        if (currentCodeType === 'qr') {
           const qrDataUrl = await QRCode.toDataURL(content, {
             width: Math.round(qrPx),
             margin: 0,
@@ -258,8 +314,8 @@ export default function Comandas({ minimal = false }) {
           qrImg.src = qrDataUrl;
           await new Promise((resolve) => {
             qrImg.onload = () => {
-              const qrXPx = (currentSettings.qrX / 100) * canvasWidth - (qrPx / 2);
-              const qrYPx = (currentSettings.qrY / 100) * canvasHeight - (qrPx / 2);
+              const qrXPx = (qrX / 100) * canvasWidth - (qrPx / 2);
+              const qrYPx = (qrY / 100) * canvasHeight - (qrPx / 2);
               ctx.drawImage(qrImg, qrXPx, qrYPx, qrPx, qrPx);
               resolve();
             };
@@ -279,10 +335,10 @@ export default function Comandas({ minimal = false }) {
           barcodeImg.src = barcodeDataUrl;
           await new Promise((resolve) => {
             barcodeImg.onload = () => {
-              const qrXPx = (currentSettings.qrX / 100) * canvasWidth - (qrPx / 2);
+              const qrXPx = (qrX / 100) * canvasWidth - (qrPx / 2);
               const bWidth = qrPx;
               const bHeight = qrPx * 0.4; // common ratio
-              const qrYPx = (currentSettings.qrY / 100) * canvasHeight - (bHeight / 2);
+              const qrYPx = (qrY / 100) * canvasHeight - (bHeight / 2);
               ctx.drawImage(barcodeImg, qrXPx, qrYPx, bWidth, bHeight);
               resolve();
             };
@@ -293,8 +349,9 @@ export default function Comandas({ minimal = false }) {
       }
     }
 
-    // 4. Draw Text (Always drawn now, even if exportOnlyQR is true)
-    if (itemData && itemData.numero) {
+    // 4. Draw Text
+    const shouldDrawText = !isVerso || (isVerso && fontSize > 0);
+    if (itemData && itemData.numero && shouldDrawText) {
       const displayNumero = !isNaN(itemData.numero) 
         ? String(itemData.numero).padStart(currentSettings.digitCount, '0') 
         : itemData.numero;
@@ -303,8 +360,8 @@ export default function Comandas({ minimal = false }) {
       ctx.font = `${currentSettings.fontWeight} ${fontPx}px ${currentSettings.fontFamily}, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const textXPx = (currentSettings.textX / 100) * canvasWidth;
-      const textYPx = (currentSettings.textY / 100) * canvasHeight;
+      const textXPx = (textX / 100) * canvasWidth;
+      const textYPx = (textY / 100) * canvasHeight;
       ctx.fillText(displayNumero, textXPx, textYPx);
     }
   };
@@ -314,17 +371,38 @@ export default function Comandas({ minimal = false }) {
       if (!canvasRef.current) return;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
-      canvas.width = pageWidth * 100;
-      canvas.height = pageHeight * 100;
       
       const sampleItem = data.length > 0 ? data[0] : { numero: '001', link: 'https://exemplo.com', controle: 'c001' };
       
-      await drawCard(ctx, canvas.width, canvas.height, sampleItem, settings);
+      // Update Front Preview (using scale 150 for responsiveness)
+      canvas.width = pageWidth * 150;
+      canvas.height = pageHeight * 150;
+      await drawCard(ctx, canvas.width, canvas.height, sampleItem, settings, 'frente');
       setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.9));
+      
+      // Update Verso Preview if enabled
+      if (hasVerso) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        await drawCard(ctx, canvas.width, canvas.height, sampleItem, settings, 'verso');
+        setPreviewVersoDataUrl(canvas.toDataURL('image/jpeg', 0.9));
+      } else {
+        setPreviewVersoDataUrl(null);
+      }
     };
     
     updatePreview();
-  }, [template, data, settings, pageWidth, pageHeight, exportOnlyQR, codeType, dataSource]);
+  }, [template, versoTemplate, hasVerso, versoCodeType, data, settings, pageWidth, pageHeight, exportOnlyQR, codeType, dataSource]);
+
+  useEffect(() => {
+    // Find the main layout wrapper and remove overflow-x-hidden to allow sticky positioning
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.classList.remove('overflow-x-hidden');
+      return () => {
+        mainEl.classList.add('overflow-x-hidden');
+      };
+    }
+  }, []);
 
   const handlePreGenerate = () => {
     if (!template && !exportOnlyQR) {
@@ -385,6 +463,7 @@ export default function Comandas({ minimal = false }) {
 
     try {
       const orientation = pageWidth > pageHeight ? 'landscape' : 'portrait';
+      const scale = 300; // High Quality (300 pixels per cm)
       
       if (exportFormat === 'pdf') {
         const pdf = new jsPDF({
@@ -394,21 +473,40 @@ export default function Comandas({ minimal = false }) {
         });
 
         const hiddenCanvas = document.createElement('canvas');
-        hiddenCanvas.width = pageWidth * 100;
-        hiddenCanvas.height = pageHeight * 100;
+        hiddenCanvas.width = pageWidth * scale;
+        hiddenCanvas.height = pageHeight * scale;
         const ctx = hiddenCanvas.getContext('2d');
 
-        for (let i = 0; i < itemsToGenerate.length; i++) {
-          if (i > 0) pdf.addPage([pageWidth, pageHeight], orientation);
+        let pageCount = 0;
+        const addPageWithCard = async (item, side) => {
+          if (pageCount > 0) pdf.addPage([pageWidth, pageHeight], orientation);
           ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-          
-          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, itemsToGenerate[i], settings);
-          
+          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, item, settings, side);
           const cardDataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
           pdf.addImage(cardDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
-          
-          if (i % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 10));
+          pageCount++;
+        };
+
+        if (!hasVerso) {
+          for (let i = 0; i < itemsToGenerate.length; i++) {
+            await addPageWithCard(itemsToGenerate[i], 'frente');
+            if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        } else if (versoExportMode === 'alternado') {
+          for (let i = 0; i < itemsToGenerate.length; i++) {
+            await addPageWithCard(itemsToGenerate[i], 'frente');
+            await addPageWithCard(itemsToGenerate[i], 'verso');
+            if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        } else {
+          // por_verso: all fronts first, then all backs
+          for (let i = 0; i < itemsToGenerate.length; i++) {
+            await addPageWithCard(itemsToGenerate[i], 'frente');
+            if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
+          }
+          for (let i = 0; i < itemsToGenerate.length; i++) {
+            await addPageWithCard(itemsToGenerate[i], 'verso');
+            if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
           }
         }
 
@@ -447,21 +545,38 @@ export default function Comandas({ minimal = false }) {
         const zip = new JSZip();
         
         const hiddenCanvas = document.createElement('canvas');
-        hiddenCanvas.width = pageWidth * 100;
-        hiddenCanvas.height = pageHeight * 100;
+        hiddenCanvas.width = pageWidth * scale;
+        hiddenCanvas.height = pageHeight * scale;
         const ctx = hiddenCanvas.getContext('2d');
 
-        for (let i = 0; i < itemsToGenerate.length; i++) {
+        const getBase64Card = async (item, side) => {
           ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, itemsToGenerate[i], settings);
-          
+          await drawCard(ctx, hiddenCanvas.width, hiddenCanvas.height, item, settings, side);
           const cardDataUrl = hiddenCanvas.toDataURL('image/png');
-          const base64Data = cardDataUrl.split(',')[1];
-          const displayNumero = !isNaN(itemsToGenerate[i].numero) 
-            ? String(itemsToGenerate[i].numero).padStart(settings.digitCount, '0') 
-            : itemsToGenerate[i].numero;
-          const filename = `comanda_${displayNumero || (i+1)}.png`;
-          zip.file(filename, base64Data, { base64: true });
+          return cardDataUrl.split(',')[1];
+        };
+
+        for (let i = 0; i < itemsToGenerate.length; i++) {
+          const item = itemsToGenerate[i];
+          const displayNumero = !isNaN(item.numero) 
+            ? String(item.numero).padStart(settings.digitCount, '0') 
+            : item.numero;
+          const numStr = displayNumero || (i + 1);
+
+          const base64Frente = await getBase64Card(item, 'frente');
+          
+          if (!hasVerso) {
+            zip.file(`comanda_${numStr}.png`, base64Frente, { base64: true });
+          } else {
+            const base64Verso = await getBase64Card(item, 'verso');
+            if (versoExportMode === 'alternado') {
+              zip.file(`comanda_${numStr}_1_frente.png`, base64Frente, { base64: true });
+              zip.file(`comanda_${numStr}_2_verso.png`, base64Verso, { base64: true });
+            } else {
+              zip.file(`frente/comanda_${numStr}.png`, base64Frente, { base64: true });
+              zip.file(`verso/comanda_${numStr}.png`, base64Verso, { base64: true });
+            }
+          }
           
           if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 10));
         }
@@ -598,21 +713,41 @@ export default function Comandas({ minimal = false }) {
                 </span>}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Template Upload */}
                 <div className="space-y-3">
                    <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl transition-all cursor-pointer group ${template ? 'border-brand-500/50 bg-brand-500/5' : 'border-dark-600 hover:border-brand-500 hover:bg-dark-700/50'}`}>
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all group-hover:rotate-12 ${template ? 'bg-brand-500 text-white shadow-lg glow-brand' : 'bg-dark-700 text-brand-400'}`}>
                       <HiOutlinePhotograph className="w-7 h-7" />
                     </div>
-                    <span className="text-sm font-black text-white uppercase tracking-widest mb-1 group-hover:text-brand-400 transition-colors pointer-events-none">Fundo (Design)</span>
-                    <p className="text-[10px] text-dark-400 text-center px-4 leading-relaxed pointer-events-none">Seu design limpo sem os dados dinâmicos</p>
+                    <span className="text-sm font-black text-white uppercase tracking-widest mb-1 group-hover:text-brand-400 transition-colors pointer-events-none">Fundo Frente</span>
+                    <p className="text-[10px] text-dark-400 text-center px-4 leading-relaxed pointer-events-none">Seu design da frente limpo</p>
                     <input type="file" accept="image/*" className="hidden" onChange={handleTemplateUpload} />
                   </label>
                   {template && (
                     <div className="flex items-center justify-between bg-dark-900/50 p-2 rounded-xl border border-dark-600/30">
-                       <span className="text-[10px] font-bold text-dark-400 ml-2">Imagem Base ✓</span>
+                       <span className="text-[10px] font-bold text-dark-400 ml-2">Imagem Frente ✓</span>
                        <button onClick={() => setTemplate(null)} className="p-1.5 hover:bg-red-500/10 text-dark-500 hover:text-red-500 rounded-lg transition-colors">
+                         <HiOutlineTrash className="w-4 h-4" />
+                       </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Verso Template Upload */}
+                <div className="space-y-3">
+                   <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-3xl transition-all cursor-pointer group ${versoTemplate ? 'border-brand-500/50 bg-brand-500/5' : 'border-dark-600 hover:border-brand-500 hover:bg-dark-700/50'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all group-hover:rotate-12 ${versoTemplate ? 'bg-brand-500 text-white shadow-lg glow-brand' : 'bg-dark-700 text-brand-400'}`}>
+                      <HiOutlinePhotograph className="w-7 h-7" />
+                    </div>
+                    <span className="text-sm font-black text-white uppercase tracking-widest mb-1 group-hover:text-brand-400 transition-colors pointer-events-none">Fundo Verso</span>
+                    <p className="text-[10px] text-dark-400 text-center px-4 leading-relaxed pointer-events-none">Seu design do verso (opcional)</p>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleVersoTemplateUpload} />
+                  </label>
+                  {versoTemplate && (
+                    <div className="flex items-center justify-between bg-dark-900/50 p-2 rounded-xl border border-dark-600/30">
+                       <span className="text-[10px] font-bold text-dark-400 ml-2">Imagem Verso ✓</span>
+                       <button onClick={() => { setVersoTemplate(null); setHasVerso(false); }} className="p-1.5 hover:bg-red-500/10 text-dark-500 hover:text-red-500 rounded-lg transition-colors">
                          <HiOutlineTrash className="w-4 h-4" />
                        </button>
                     </div>
@@ -696,211 +831,421 @@ export default function Comandas({ minimal = false }) {
                 </div>
               </div>
 
-              {/* Elements Positioning */}
-              <div className="space-y-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">B. Posicionamento de Elementos (%)</h3>
-                  <button 
-                    onClick={handleAutoCenter}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-bold transition-all border border-brand-500/20"
-                  >
-                    <HiOutlineRefresh className="w-3.5 h-3.5" />
-                    Auto-Centralizar
-                  </button>
+              {/* Toggle Verso & Side Selector */}
+              <div className="mb-8 p-4 bg-dark-900/40 rounded-2xl border border-dark-600/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Configuração de Verso (Costas)</h4>
+                  <p className="text-[10px] text-dark-400 mt-0.5">Deseja que as comandas possuam impressão no verso?</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                  {/* QR Code Group */}
-                  <div className="space-y-6">
-                    <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Código Principal</h4>
-                    
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-dark-200">Tamanho do QR</span>
-                        <span className="text-brand-400">{settings.qrSize}%</span>
-                      </div>
-                      <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                          <span>Horizontal (X)</span>
-                          <span>{settings.qrX}%</span>
-                        </div>
-                        <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                          <span>Vertical (Y)</span>
-                          <span>{settings.qrY}%</span>
-                        </div>
-                        <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                      </div>
-                    </div>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-black uppercase ${hasVerso ? 'text-brand-400' : 'text-dark-500'}`}>
+                      {hasVerso ? 'Habilitado' : 'Desabilitado'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setHasVerso(!hasVerso);
+                        if (!hasVerso) setPreviewSide('verso');
+                        else setPreviewSide('frente');
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors outline-none ${hasVerso ? 'bg-brand-500' : 'bg-dark-700'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasVerso ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
                   </div>
-
-                  {/* Text Group */}
-                  <div className="space-y-6">
-                    <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Numeração / Texto</h4>
-                    
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-dark-200">Tamanho da Fonte</span>
-                        <span className="text-brand-400">{settings.fontSize}%</span>
-                      </div>
-                      <input type="range" min="1" max="30" value={settings.fontSize} onChange={(e) => handleSettingChange('fontSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                          <span>Horizontal (X)</span>
-                          <span>{settings.textX}%</span>
-                        </div>
-                        <input type="range" min="0" max="100" value={settings.textX} onChange={(e) => handleSettingChange('textX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                          <span>Vertical (Y)</span>
-                          <span>{settings.textY}%</span>
-                        </div>
-                        <input type="range" min="0" max="100" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pt-2">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-dark-400 uppercase">Fonte</label>
-                          <select 
-                            value={settings.fontFamily} 
-                            onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
-                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-500"
-                          >
-                            <option value="Inter">Inter</option>
-                            <option value="Roboto">Roboto</option>
-                            <option value="Arial">Arial</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Courier New">Courier New</option>
-                            <option value="Outfit">Outfit</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-dark-400 uppercase">Estilo</label>
-                          <select 
-                            value={settings.fontWeight} 
-                            onChange={(e) => handleSettingChange('fontWeight', e.target.value)}
-                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-500"
-                          >
-                            <option value="normal">Normal</option>
-                            <option value="bold">Negrito</option>
-                            <option value="italic">Itálico</option>
-                            <option value="bold italic">Negrito Itálico</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-dark-400 uppercase">Dígitos (Numeração)</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button 
-                            onClick={() => handleSettingChange('digitCount', 2)}
-                            className={`py-2 px-3 text-[10px] font-bold rounded-lg border transition-all ${settings.digitCount === 2 ? 'bg-brand-500 text-white border-brand-400' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
-                          >
-                            2 Dígitos (01)
-                          </button>
-                          <button 
-                            onClick={() => handleSettingChange('digitCount', 3)}
-                            className={`py-2 px-3 text-[10px] font-bold rounded-lg border transition-all ${settings.digitCount === 3 ? 'bg-brand-500 text-white border-brand-400' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
-                          >
-                            3 Dígitos (001)
-                          </button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-dark-400 uppercase">Cor do Texto</label>
-                        <div className="flex gap-3">
-                          <input 
-                            type="color" 
-                            value={settings.textColor} 
-                            onChange={(e) => handleSettingChange('textColor', e.target.value)}
-                            className="w-10 h-10 rounded-lg bg-dark-900 border border-dark-600 p-1 cursor-pointer"
-                          />
-                          <input 
-                            type="text" 
-                            value={settings.textColor} 
-                            onChange={(e) => handleSettingChange('textColor', e.target.value)}
-                            className="flex-1 bg-dark-900/50 border border-dark-600 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Draw Box Feature */}
-                <div className="pt-6 border-t border-dark-600/50">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded bg-dark-700 border border-dark-600 flex items-center justify-center">
-                        <input 
-                          type="checkbox" 
-                          checked={settings.drawWhiteBox} 
-                          onChange={(e) => setSettings(p => ({...p, drawWhiteBox: e.target.checked}))}
-                          className="w-4 h-4 rounded-sm accent-brand-500 cursor-pointer"
-                        />
-                      </div>
-                      <span className="text-sm font-bold text-white uppercase tracking-wider">Habilitar Fundo Branco de Contraste</span>
-                    </div>
-                  </div>
-
-                  {settings.drawWhiteBox && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-fade-in">
-                      <div className="space-y-6">
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">Largura da Caixa</span>
-                            <span className="text-brand-400">{settings.boxWidth}%</span>
-                          </div>
-                          <input type="range" min="10" max="100" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">Altura da Caixa</span>
-                            <span className="text-brand-400">{settings.boxHeight}%</span>
-                          </div>
-                          <input type="range" min="10" max="100" value={settings.boxHeight} onChange={(e) => handleSettingChange('boxHeight', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                        </div>
-                      </div>
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                              <span>Posição X</span>
-                              <span>{settings.boxX}%</span>
-                            </div>
-                            <input type="range" min="0" max="100" value={settings.boxX} onChange={(e) => handleSettingChange('boxX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                          </div>
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                              <span>Posição Y</span>
-                              <span>{settings.boxY}%</span>
-                            </div>
-                            <input type="range" min="0" max="100" value={settings.boxY} onChange={(e) => handleSettingChange('boxY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">Bordas Arredondadas</span>
-                            <span className="text-brand-400">{settings.boxRadius}%</span>
-                          </div>
-                          <input type="range" min="0" max="50" value={settings.boxRadius} onChange={(e) => handleSettingChange('boxRadius', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                        </div>
-                      </div>
+                  
+                  {hasVerso && (
+                    <div className="flex bg-dark-800 p-1 rounded-xl border border-dark-600/40">
+                      <button
+                        onClick={() => setPreviewSide('frente')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewSide === 'frente' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Frente
+                      </button>
+                      <button
+                        onClick={() => setPreviewSide('verso')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${previewSide === 'verso' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                      >
+                        Verso
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
+
+              {previewSide === 'verso' && hasVerso ? (
+                <div className="space-y-8 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">B. Posicionamento de Elementos do Verso (%)</h3>
+                  </div>
+
+                  {/* Verso Code Type Selection */}
+                  <div className="space-y-4">
+                    <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Tipo de Código no Verso</span>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { id: 'none', label: 'Nenhum' },
+                        { id: 'qr', label: 'QR Code' },
+                        { id: 'barcode', label: 'Cód. Barras' }
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          onClick={() => setVersoCodeType(opt.id)}
+                          type="button"
+                          className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${versoCodeType === opt.id ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                    {/* Verso Code Sizing & Positioning */}
+                    {versoCodeType !== 'none' ? (
+                      <div className="space-y-6">
+                        <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Posicionamento do Código (Verso)</h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-dark-200">Tamanho do Código</span>
+                            <span className="text-brand-400">{settings.versoQrSize}%</span>
+                          </div>
+                          <input type="range" min="10" max="100" value={settings.versoQrSize} onChange={(e) => handleSettingChange('versoQrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Horizontal (X)</span>
+                              <span>{settings.versoQrX}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.versoQrX} onChange={(e) => handleSettingChange('versoQrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Vertical (Y)</span>
+                              <span>{settings.versoQrY}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.versoQrY} onChange={(e) => handleSettingChange('versoQrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-dark-900/30 border border-dark-600/30 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-dark-400">
+                        <p className="text-xs font-bold">Sem código no verso</p>
+                        <p className="text-[10px] text-dark-500 mt-1">Selecione "QR Code" ou "Cód. Barras" acima para configurar e posicionar um código dinâmico no verso.</p>
+                      </div>
+                    )}
+
+                    {/* Verso Text/Number Group */}
+                    <div className="space-y-6">
+                      <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Numeração / Texto (Verso)</h4>
+                      
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-dark-200">Tamanho da Fonte (Verso)</span>
+                          <span className="text-brand-400">{settings.versoFontSize}%</span>
+                        </div>
+                        <p className="text-[9px] text-dark-400 -mt-2">Use 0 para não desenhar o número no verso.</p>
+                        <input type="range" min="0" max="30" value={settings.versoFontSize} onChange={(e) => handleSettingChange('versoFontSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
+                      </div>
+
+                      {settings.versoFontSize > 0 && (
+                        <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Horizontal (X)</span>
+                              <span>{settings.versoTextX}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.versoTextX} onChange={(e) => handleSettingChange('versoTextX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Vertical (Y)</span>
+                              <span>{settings.versoTextY}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.versoTextY} onChange={(e) => handleSettingChange('versoTextY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Draw Box Feature for Verso */}
+                  {versoCodeType !== 'none' && (
+                    <div className="pt-6 border-t border-dark-600/50">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded bg-dark-700 border border-dark-600 flex items-center justify-center">
+                            <input 
+                              type="checkbox" 
+                              checked={settings.versoDrawWhiteBox} 
+                              onChange={(e) => setSettings(p => ({...p, versoDrawWhiteBox: e.target.checked}))}
+                              className="w-4 h-4 rounded-sm accent-brand-500 cursor-pointer"
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-white uppercase tracking-wider">Habilitar Fundo Branco de Contraste no Verso</span>
+                        </div>
+                      </div>
+
+                      {settings.versoDrawWhiteBox && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-fade-in">
+                          <div className="space-y-6">
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Largura da Caixa (Verso)</span>
+                                <span className="text-brand-400">{settings.versoBoxWidth}%</span>
+                              </div>
+                              <input type="range" min="10" max="100" value={settings.versoBoxWidth} onChange={(e) => handleSettingChange('versoBoxWidth', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                            </div>
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Altura da Caixa (Verso)</span>
+                                <span className="text-brand-400">{settings.versoBoxHeight}%</span>
+                              </div>
+                              <input type="range" min="10" max="100" value={settings.versoBoxHeight} onChange={(e) => handleSettingChange('versoBoxHeight', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                            </div>
+                          </div>
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Posição X</span>
+                                  <span>{settings.versoBoxX}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.versoBoxX} onChange={(e) => handleSettingChange('versoBoxX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Posição Y</span>
+                                  <span>{settings.versoBoxY}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.versoBoxY} onChange={(e) => handleSettingChange('versoBoxY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Bordas Arredondadas</span>
+                                <span className="text-brand-400">{settings.versoBoxRadius}%</span>
+                              </div>
+                              <input type="range" min="0" max="50" value={settings.versoBoxRadius} onChange={(e) => handleSettingChange('versoBoxRadius', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Elements Positioning */}
+                  <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">B. Posicionamento de Elementos (%)</h3>
+                      <button 
+                        onClick={handleAutoCenter}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-bold transition-all border border-brand-500/20"
+                      >
+                        <HiOutlineRefresh className="w-3.5 h-3.5" />
+                        Auto-Centralizar
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                      {/* QR Code Group */}
+                      <div className="space-y-6">
+                        <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Código Principal</h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-dark-200">Tamanho do QR</span>
+                            <span className="text-brand-400">{settings.qrSize}%</span>
+                          </div>
+                          <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Horizontal (X)</span>
+                              <span>{settings.qrX}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Vertical (Y)</span>
+                              <span>{settings.qrY}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Text Group */}
+                      <div className="space-y-6">
+                        <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Numeração / Texto</h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-dark-200">Tamanho da Fonte</span>
+                            <span className="text-brand-400">{settings.fontSize}%</span>
+                          </div>
+                          <input type="range" min="1" max="30" value={settings.fontSize} onChange={(e) => handleSettingChange('fontSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Horizontal (X)</span>
+                              <span>{settings.textX}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.textX} onChange={(e) => handleSettingChange('textX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                              <span>Vertical (Y)</span>
+                              <span>{settings.textY}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={settings.textY} onChange={(e) => handleSettingChange('textY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 pt-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-dark-400 uppercase">Fonte</label>
+                              <select 
+                                value={settings.fontFamily} 
+                                onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
+                                className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-500"
+                              >
+                                <option value="Inter">Inter</option>
+                                <option value="Roboto">Roboto</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Outfit">Outfit</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-dark-400 uppercase">Estilo</label>
+                              <select 
+                                value={settings.fontWeight} 
+                                onChange={(e) => handleSettingChange('fontWeight', e.target.value)}
+                                className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-500"
+                              >
+                                <option value="normal">Normal</option>
+                                <option value="bold">Negrito</option>
+                                <option value="italic">Itálico</option>
+                                <option value="bold italic">Negrito Itálico</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-dark-400 uppercase">Dígitos (Numeração)</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => handleSettingChange('digitCount', 2)}
+                                type="button"
+                                className={`py-2 px-3 text-[10px] font-bold rounded-lg border transition-all ${settings.digitCount === 2 ? 'bg-brand-500 text-white border-brand-400' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                              >
+                                2 Dígitos (01)
+                              </button>
+                              <button 
+                                onClick={() => handleSettingChange('digitCount', 3)}
+                                type="button"
+                                className={`py-2 px-3 text-[10px] font-bold rounded-lg border transition-all ${settings.digitCount === 3 ? 'bg-brand-500 text-white border-brand-400' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                              >
+                                3 Dígitos (001)
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-dark-400 uppercase">Cor do Texto</label>
+                            <div className="flex gap-3">
+                              <input 
+                                type="color" 
+                                value={settings.textColor} 
+                                onChange={(e) => handleSettingChange('textColor', e.target.value)}
+                                className="w-10 h-10 rounded-lg bg-dark-900 border border-dark-600 p-1 cursor-pointer"
+                              />
+                              <input 
+                                type="text" 
+                                value={settings.textColor} 
+                                onChange={(e) => handleSettingChange('textColor', e.target.value)}
+                                className="flex-1 bg-dark-900/50 border border-dark-600 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  {/* Draw Box Feature */}
+                  <div className="pt-6 border-t border-dark-600/50">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded bg-dark-700 border border-dark-600 flex items-center justify-center">
+                          <input 
+                            type="checkbox" 
+                            checked={settings.drawWhiteBox} 
+                            onChange={(e) => setSettings(p => ({...p, drawWhiteBox: e.target.checked}))}
+                            className="w-4 h-4 rounded-sm accent-brand-500 cursor-pointer"
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-white uppercase tracking-wider">Habilitar Fundo Branco de Contraste</span>
+                      </div>
+                    </div>
+
+                    {settings.drawWhiteBox && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-fade-in">
+                        <div className="space-y-6">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-xs font-bold">
+                              <span className="text-dark-200">Largura da Caixa</span>
+                              <span className="text-brand-400">{settings.boxWidth}%</span>
+                            </div>
+                            <input type="range" min="10" max="100" value={settings.boxWidth} onChange={(e) => handleSettingChange('boxWidth', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-xs font-bold">
+                              <span className="text-dark-200">Altura da Caixa</span>
+                              <span className="text-brand-400">{settings.boxHeight}%</span>
+                            </div>
+                            <input type="range" min="10" max="100" value={settings.boxHeight} onChange={(e) => handleSettingChange('boxHeight', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                <span>Posição X</span>
+                                <span>{settings.boxX}%</span>
+                              </div>
+                              <input type="range" min="0" max="100" value={settings.boxX} onChange={(e) => handleSettingChange('boxX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                            </div>
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                <span>Posição Y</span>
+                                <span>{settings.boxY}%</span>
+                              </div>
+                              <input type="range" min="0" max="100" value={settings.boxY} onChange={(e) => handleSettingChange('boxY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-xs font-bold">
+                              <span className="text-dark-200">Bordas Arredondadas</span>
+                              <span className="text-brand-400">{settings.boxRadius}%</span>
+                            </div>
+                            <input type="range" min="0" max="50" value={settings.boxRadius} onChange={(e) => handleSettingChange('boxRadius', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Step 4: Export Options */}
@@ -974,18 +1319,43 @@ export default function Comandas({ minimal = false }) {
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => setExportFormat('pdf')}
+                      type="button"
                       className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${exportFormat === 'pdf' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
                     >
                       PDF
                     </button>
                     <button 
                       onClick={() => setExportFormat('zip')}
+                      type="button"
                       className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${exportFormat === 'zip' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
                     >
                       ZIP (PNG)
                     </button>
                   </div>
                 </div>
+
+                {/* Verso Export Mode */}
+                {hasVerso && (
+                  <div className="space-y-4 md:col-span-2 pt-4 border-t border-dark-600/30 animate-fade-in">
+                    <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Ordenação do Verso</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={() => setVersoExportMode('alternado')}
+                        type="button"
+                        className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${versoExportMode === 'alternado' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                      >
+                        Alternado (Frente, Verso, Frente, Verso...)
+                      </button>
+                      <button 
+                        onClick={() => setVersoExportMode('por_verso')}
+                        type="button"
+                        className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${versoExportMode === 'por_verso' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                      >
+                        Por Verso (Todas Frentes, depois todos Versos)
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1017,15 +1387,28 @@ export default function Comandas({ minimal = false }) {
           </div>
 
           {/* Right Column - Preview Stickiness */}
-          <div className="lg:col-span-4 lg:sticky lg:top-8 self-start">
+          <div className="lg:col-span-4 lg:sticky lg:top-[5.5rem] self-start z-10">
             <div className="glass-card p-6 overflow-hidden">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-white uppercase tracking-widest">Preview Real</h2>
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-500/50"></span>
-                  <span className="w-2 h-2 rounded-full bg-yellow-500/50"></span>
-                  <span className="w-2 h-2 rounded-full bg-green-500/50"></span>
-                </div>
+                {hasVerso && (
+                  <div className="flex bg-dark-800/80 p-0.5 rounded-lg border border-dark-600/40">
+                    <button
+                      onClick={() => setPreviewSide('frente')}
+                      type="button"
+                      className={`px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all ${previewSide === 'frente' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                    >
+                      Frente
+                    </button>
+                    <button
+                      onClick={() => setPreviewSide('verso')}
+                      type="button"
+                      className={`px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all ${previewSide === 'verso' ? 'bg-brand-500 text-white' : 'text-dark-400 hover:text-white'}`}
+                    >
+                      Verso
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="bg-dark-950 rounded-2xl p-8 flex items-center justify-center border border-dark-600/50 shadow-inner relative group">
@@ -1034,20 +1417,38 @@ export default function Comandas({ minimal = false }) {
                 
                 <canvas ref={canvasRef} className="hidden" />
                 
-                {previewDataUrl ? (
-                  <div className="relative animate-fade-in">
-                    <img 
-                      src={previewDataUrl} 
-                      alt="Preview Comanda" 
-                      className="w-full h-auto max-w-[320px] rounded-sm shadow-2xl mx-auto border border-white/10 ring-1 ring-black/50"
-                    />
-                    <div className="absolute -inset-4 border border-brand-500/20 rounded-lg pointer-events-none group-hover:border-brand-500/40 transition-colors" />
-                  </div>
+                {previewSide === 'frente' ? (
+                  previewDataUrl ? (
+                    <div className="relative animate-fade-in">
+                      <img 
+                        src={previewDataUrl} 
+                        alt="Preview Frente" 
+                        className="w-full h-auto max-w-[320px] rounded-sm shadow-2xl mx-auto border border-white/10 ring-1 ring-black/50"
+                      />
+                      <div className="absolute -inset-4 border border-brand-500/20 rounded-lg pointer-events-none group-hover:border-brand-500/40 transition-colors" />
+                    </div>
+                  ) : (
+                    <div style={{ aspectRatio: `${pageWidth}/${pageHeight}` }} className="w-full max-w-[320px] bg-dark-900/50 border-2 border-dashed border-dark-600 rounded-xl flex flex-col items-center justify-center text-dark-500 p-8 text-center transition-all group-hover:border-dark-500 shadow-xl">
+                      <HiOutlinePhotograph className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="text-sm font-bold uppercase tracking-widest opacity-40">Aguardando Frente</p>
+                    </div>
+                  )
                 ) : (
-                  <div style={{ aspectRatio: `${pageWidth}/${pageHeight}` }} className="w-full max-w-[320px] bg-dark-900/50 border-2 border-dashed border-dark-600 rounded-xl flex flex-col items-center justify-center text-dark-500 p-8 text-center transition-all group-hover:border-dark-500 shadow-xl">
-                    <HiOutlinePhotograph className="w-12 h-12 mb-4 opacity-20" />
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-40">Aguardando Imagem e Dados</p>
-                  </div>
+                  previewVersoDataUrl ? (
+                    <div className="relative animate-fade-in">
+                      <img 
+                        src={previewVersoDataUrl} 
+                        alt="Preview Verso" 
+                        className="w-full h-auto max-w-[320px] rounded-sm shadow-2xl mx-auto border border-white/10 ring-1 ring-black/50"
+                      />
+                      <div className="absolute -inset-4 border border-brand-500/20 rounded-lg pointer-events-none group-hover:border-brand-500/40 transition-colors" />
+                    </div>
+                  ) : (
+                    <div style={{ aspectRatio: `${pageWidth}/${pageHeight}` }} className="w-full max-w-[320px] bg-dark-900/50 border-2 border-dashed border-dark-600 rounded-xl flex flex-col items-center justify-center text-dark-500 p-8 text-center transition-all group-hover:border-dark-500 shadow-xl">
+                      <HiOutlinePhotograph className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="text-sm font-bold uppercase tracking-widest opacity-40">Sem imagem de Verso</p>
+                    </div>
+                  )
                 )}
               </div>
 
@@ -1070,6 +1471,68 @@ export default function Comandas({ minimal = false }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating Preview for Mobile/Tablet */}
+      {previewDataUrl && (
+        <>
+          <div 
+            onClick={() => setIsMobilePreviewExpanded(true)}
+            className="fixed bottom-6 right-6 z-40 block lg:hidden max-w-[100px] bg-dark-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-brand-500/30 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            <p className="text-[7px] font-black uppercase text-brand-500 tracking-wider mb-1 text-center select-none">
+              {previewSide === 'frente' ? 'Frente' : 'Verso'}
+            </p>
+            <img 
+              src={previewSide === 'frente' ? previewDataUrl : (previewVersoDataUrl || previewDataUrl)} 
+              alt="Floating Preview"
+              className="w-full h-auto rounded-lg border border-white/5 select-none"
+            />
+          </div>
+
+          {/* Expanded Mobile/Tablet Preview Modal */}
+          {isMobilePreviewExpanded && (
+            <div 
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-fade-in cursor-zoom-out"
+              onClick={() => setIsMobilePreviewExpanded(false)}
+            >
+              <div 
+                className="relative max-w-full max-h-[85vh] flex flex-col items-center"
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inner card content
+              >
+                {/* Header with side toggle if hasVerso */}
+                {hasVerso && (
+                  <div className="flex bg-dark-800/95 p-1 rounded-xl border border-dark-600/40 mb-4 shadow-xl">
+                    <button
+                      onClick={() => setPreviewSide('frente')}
+                      type="button"
+                      className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${previewSide === 'frente' ? 'bg-brand-500 text-white shadow-md' : 'text-dark-400 hover:text-white'}`}
+                    >
+                      Frente
+                    </button>
+                    <button
+                      onClick={() => setPreviewSide('verso')}
+                      type="button"
+                      className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${previewSide === 'verso' ? 'bg-brand-500 text-white shadow-md' : 'text-dark-400 hover:text-white'}`}
+                    >
+                      Verso
+                    </button>
+                  </div>
+                )}
+
+                <img 
+                  src={previewSide === 'frente' ? previewDataUrl : (previewVersoDataUrl || previewDataUrl)} 
+                  alt="Expanded Preview" 
+                  className="w-auto h-auto max-w-[85vw] max-h-[65vh] rounded-xl shadow-2xl border border-white/10 ring-1 ring-black/50"
+                />
+                
+                <p className="text-dark-400 text-[10px] mt-4 select-none font-bold uppercase tracking-wider bg-dark-800/60 px-4 py-2 rounded-full border border-dark-600/20">
+                  Toque na área vazia para fechar
+                </p>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {activeTab === 'historico' && (

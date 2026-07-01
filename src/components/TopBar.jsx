@@ -99,7 +99,7 @@ export default function TopBar() {
             onClick={() => setShowNotif(!showNotif)}
             className="relative p-2.5 rounded-xl bg-dark-700/50 border border-dark-600/50 text-dark-300 hover:text-white hover:border-dark-500 transition-all"
           >
-            <HiOutlineBell className="w-5 h-5" />
+            <HiOutlineBell className={`w-5 h-5 ${notifications.length > 0 ? 'animate-ring text-brand-400' : ''}`} />
             {notifications.length > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full animate-pulse-slow" />
             )}

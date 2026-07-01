@@ -15,7 +15,7 @@ export function AppProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [segments, setSegments] = useState([]);
   const [schedules, setSchedules] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [profile, setProfile] = useState({});
   const [apiKeys, setApiKeys] = useState({});
   const [statusNotification, setStatusNotification] = useState(null);
@@ -396,6 +396,74 @@ export function AppProvider({ children }) {
       if (postsChannel) supabase.removeChannel(postsChannel);
     };
   }, [user, loadingUser]);
+
+  // Alert user of the next scheduled activity whenever schedules change
+  useEffect(() => {
+    if (!schedules || schedules.length === 0) return;
+
+    const findNextActivity = (list) => {
+      const portugueseDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      const now = new Date();
+      const currentDayIdx = now.getDay(); // 0-6
+      const currentHour = now.getHours().toString().padStart(2, '0');
+      const currentMin = now.getMinutes().toString().padStart(2, '0');
+      const currentTimeStr = `${currentHour}:${currentMin}`;
+
+      // Search sequentially starting from today (currentDayIdx) up to 7 days ahead
+      for (let i = 0; i < 7; i++) {
+        const checkDayIdx = (currentDayIdx + i) % 7;
+        const checkDayName = portugueseDays[checkDayIdx];
+        
+        const dayTasks = list.filter(s => s.dayOfWeek === checkDayName);
+        if (dayTasks.length > 0) {
+          const sortedTasks = dayTasks.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+          
+          if (i === 0) {
+            const nextTasksToday = sortedTasks.filter(t => (t.startTime || '') > currentTimeStr);
+            if (nextTasksToday.length > 0) {
+              return { task: nextTasksToday[0], isToday: true, dayName: checkDayName };
+            }
+          } else {
+            return { task: sortedTasks[0], isToday: false, dayName: checkDayName };
+          }
+        }
+      }
+      return null;
+    };
+
+    const nextInfo = findNextActivity(schedules);
+    if (nextInfo) {
+      const { task, isToday, dayName } = nextInfo;
+      const whenStr = isToday ? 'hoje' : `no próximo dia (${dayName})`;
+      toast(`Cronograma Atualizado!\nPróxima atividade ${whenStr}: "${task.title}" às ${task.startTime || task.time}`, {
+        icon: '⏰',
+        duration: 5000,
+        id: 'next-activity-toast'
+      });
+    }
+  }, [schedules]);
+
+  // Alert user of events happening tomorrow
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const tomorrowEvents = events.filter(e => {
+      if (!e.date) return false;
+      return e.date.split('T')[0] === tomorrowStr;
+    });
+
+    tomorrowEvents.forEach(e => {
+      toast(`Lembrete de Evento Amanhã: "${e.title}"`, {
+        icon: '📅',
+        duration: 7000,
+        id: `event-tomorrow-${e.id}`
+      });
+    });
+  }, [events]);
 
   // Posts CRUD
   const addPost = async (post) => {
