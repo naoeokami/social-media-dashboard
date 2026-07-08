@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   HiX, HiOutlineLink, HiOutlineCurrencyDollar, HiHeart, HiChat, 
@@ -282,9 +282,9 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-6 lg:p-8">
           {form.status === 'producao' && form.feedback_note && (
-            <div className="p-4 rounded-xl bg-warning/10 border border-warning/30 animate-fade-in mb-6">
+            <div className="p-4 rounded-2xl bg-warning/10 border border-warning/30 animate-fade-in mb-8">
               <h3 className="text-warning font-semibold text-sm mb-1 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
                 Ajustes Solicitados pelo Cliente
@@ -293,313 +293,375 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
-            {/* Form Fields - Span 2 */}
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              {/* Left Column */}
-              <div className="space-y-6">
-                {/* Title */}
-                <div className="group">
-                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Título da Peça</label>
-                  <input
-                    type="text"
-                    value={form.title}
-                    onChange={e => handleChange('title', e.target.value)}
-                    placeholder="Ex: Post sobre lançamento do produto"
-                    className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm"
-                    required
-                  />
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10">
+            {/* === FORM STEPS === */}
+            <div className="space-y-10">
 
-                {/* Caption */}
-                <div className="group">
-                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Legenda (Copy)</label>
-                  <textarea
-                    value={form.caption}
-                    onChange={e => handleChange('caption', e.target.value)}
-                    placeholder="Escreva a legenda do post..."
-                    rows={6}
-                    className="rich-editor w-full bg-dark-700/30 border-dark-600/50 rounded-xl focus:ring-brand-500/20 focus:border-brand-500/50 min-h-[140px] text-white"
-                  />
+              {/* STEP 1 — Identificação */}
+              <div className="relative pl-6 border-l-2 border-brand-500/30 hover:border-brand-500/70 transition-colors duration-300">
+                <div className="absolute -left-[18px] top-0 w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-brand-500/30">
+                  1
                 </div>
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-white">Identificação</h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Dê um nome claro à peça e escreva a legenda</p>
+                </div>
+                <div className="space-y-5">
+                  <div className="group">
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">
+                      Título da Peça <span className="text-brand-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.title}
+                      onChange={e => handleChange('title', e.target.value)}
+                      placeholder="Ex: Post sobre lançamento do produto"
+                      className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/15 transition-all text-sm"
+                      required
+                      autoFocus
+                    />
+                  </div>
 
-                {/* Date & Time */}
+                  <div className="group">
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">
+                      Legenda (Copy)
+                    </label>
+                    <textarea
+                      value={form.caption}
+                      onChange={e => handleChange('caption', e.target.value)}
+                      placeholder="Escreva a legenda que vai no post, inclua os emojis e hashtags..."
+                      rows={5}
+                      className="rich-editor w-full bg-dark-700/30 border-dark-600/50 rounded-xl focus:ring-brand-500/15 focus:border-brand-500/60 text-white placeholder-dark-500 resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 2 — Agendamento */}
+              <div className="relative pl-6 border-l-2 border-purple-500/30 hover:border-purple-500/70 transition-colors duration-300">
+                <div className="absolute -left-[18px] top-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-purple-500/30">
+                  2
+                </div>
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-white">Agendamento</h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Quando esse conteúdo será publicado?</p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="group">
-                    <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Data</label>
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-purple-400 transition-colors">Data</label>
                     <input
                       type="date"
                       value={form.date}
                       onChange={e => handleChange('date', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm [color-scheme:dark]"
+                      className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all text-sm [color-scheme:dark]"
                     />
                   </div>
                   <div className="group">
-                    <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Hora</label>
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-purple-400 transition-colors">Hora</label>
                     <input
                       type="time"
                       value={form.time}
                       onChange={e => handleChange('time', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm [color-scheme:dark]"
+                      className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all text-sm [color-scheme:dark]"
                     />
                   </div>
-                </div>
-
-                {/* Content Type & Segment */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="group">
-                    <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Tipo de Conteúdo</label>
-                    <select
-                      value={form.contentType}
-                      onChange={e => handleChange('contentType', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none cursor-pointer"
-                    >
-                      {contentTypes.map(type => (
-                        <option key={type} value={type} className="bg-dark-800">{type}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="group">
-                    <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Segmento</label>
-                    <select
-                      value={form.segment}
-                      onChange={e => handleChange('segment', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none cursor-pointer"
-                    >
-                      <option value="" className="bg-dark-800">Selecione</option>
-                      {segments.map(seg => (
-                        <option key={seg.id} value={seg.name} className="bg-dark-800">{seg.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Product */}
-                <div className="group">
-                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Produto Divulgado</label>
-                  <select
-                    value={form.productId}
-                    onChange={e => handleChange('productId', e.target.value)}
-                    className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none cursor-pointer"
-                  >
-                    <option value="" className="bg-dark-800">Nenhum produto</option>
-                    {products.map(prod => (
-                      <option key={prod.id} value={prod.id} className="bg-dark-800">
-                        {prod.name} ({prod.segment || 'Sem segmento'})
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-6">
-                {/* Platforms */}
-                <div>
-                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-3">Plataformas</label>
-                  <div className="flex flex-wrap gap-3">
-                    {platforms.map(({ name, color }) => (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => togglePlatform(name)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border ${
-                          form.platforms.includes(name)
-                            ? 'border-transparent text-white shadow-lg scale-[1.02]'
-                            : 'border-dark-600/50 text-dark-300 hover:border-dark-500 bg-dark-700/30 hover:bg-dark-700/50'
-                        }`}
-                        style={form.platforms.includes(name) ? { backgroundColor: color + '20', borderColor: color, color: color, boxShadow: `0 4px 15px ${color}20` } : {}}
+              {/* STEP 3 — Tipo & Classificação */}
+              <div className="relative pl-6 border-l-2 border-pink-500/30 hover:border-pink-500/70 transition-colors duration-300">
+                <div className="absolute -left-[18px] top-0 w-8 h-8 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-pink-500/30">
+                  3
+                </div>
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-white">Tipo & Classificação</h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Formato do conteúdo, segmento e produto relacionado</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="group">
+                      <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-pink-400 transition-colors">Tipo de Conteúdo</label>
+                      <select
+                        value={form.contentType}
+                        onChange={e => handleChange('contentType', e.target.value)}
+                        className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-pink-500/60 focus:ring-2 focus:ring-pink-500/15 transition-all text-sm appearance-none cursor-pointer"
                       >
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: form.platforms.includes(name) ? `0 0 8px ${color}` : '' }} />
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Perfis de Publicação */}
-                <div>
-                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-3">
-                    Perfis de Publicação (Collab)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {socialProfiles.map(p => {
-                      const isSelected = form.profileIds?.includes(p.id);
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setForm(prev => {
-                              const profileIds = prev.profileIds || [];
-                              const updated = profileIds.includes(p.id)
-                                ? profileIds.filter(id => id !== p.id)
-                                : [...profileIds, p.id];
-                              return { ...prev, profileIds: updated };
-                            });
-                          }}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 border ${
-                            isSelected
-                              ? 'border-brand-500 bg-brand-500/10 text-white shadow-lg scale-[1.02]'
-                              : 'border-dark-600/50 text-dark-300 hover:border-dark-500 bg-dark-700/30 hover:bg-dark-700/50'
-                          }`}
-                        >
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {p.avatarUrl ? (
-                              <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-white text-[9px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
-                            )}
-                          </div>
-                          <div className="text-left">
-                            <div className="font-bold leading-none">{p.name}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                    {socialProfiles.length === 0 && (
-                      <p className="text-xs text-dark-400">
-                        Nenhum perfil cadastrado. Acesse as Configurações de Perfil (canto superior direito) para cadastrar.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Tool & Status */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="group">
-                    <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Ferramenta</label>
-                    <select
-                      value={form.tool}
-                      onChange={e => handleChange('tool', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none cursor-pointer"
-                    >
-                      {tools.map(t => (
-                        <option key={t} value={t} className="bg-dark-800">{t}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="group">
-                    <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Status</label>
-                    <select
-                      value={form.status}
-                      onChange={e => handleChange('status', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm appearance-none cursor-pointer"
-                    >
-                      {postStatuses.map(s => (
-                        <option key={s.value} value={s.value} className="bg-dark-800">{s.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* File URL and Upload */}
-                <div className="group">
-                  <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-brand-400 transition-colors">Mídia (Upload ou Link)</label>
-                  <div className="flex flex-col gap-4 p-4 rounded-xl border border-dark-600/30 bg-dark-700/20">
-                    <div className="relative">
-                      <HiOutlineLink className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors" />
-                      <input
-                        type="url"
-                        value={form.fileUrl?.includes('supabase') ? '' : form.fileUrl}
-                        onChange={e => {
-                          const val = e.target.value;
-                          handleChange('fileUrl', val);
-                          if (val && (!form.fileUrls || form.fileUrls.length === 0)) {
-                             handleChange('fileUrls', [val]);
-                          }
-                        }}
-                        placeholder="Link externo (Drive, Pinterest, etc) ou faça upload abaixo"
-                        className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm"
-                      />
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*,video/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        disabled={isUploading || (form.fileUrls?.length >= 10)}
-                        className="block w-full text-sm text-dark-300
-                          file:mr-4 file:py-2.5 file:px-4
-                          file:rounded-xl file:border-0
-                          file:text-sm file:font-semibold
-                          file:bg-brand-500/10 file:text-brand-400
-                          hover:file:bg-brand-500/20 file:transition-all
-                          file:cursor-pointer disabled:opacity-50"
-                      />
-                    </div>
-
-                    {/* Image Previews with Drag & Drop */}
-                    {form.fileUrls?.length > 0 && (
-                      <div className="flex flex-wrap gap-3 mt-2">
-                        {form.fileUrls.map((url, idx) => (
-                          <div 
-                            key={idx} 
-                            draggable
-                            onDragStart={() => handleDragStart(idx)}
-                            onDragOver={handleDragOver}
-                            onDrop={() => handleDrop(idx)}
-                            className={`relative w-16 h-16 rounded-xl overflow-hidden border ${draggedIdx === idx ? 'border-brand-500 opacity-50' : 'border-dark-600/50'} group/img shadow-lg cursor-grab active:cursor-grabbing`}
-                          >
-                            {isVideo(url) ? (
-                              <video src={url} className="w-full h-full object-cover pointer-events-none" muted playsInline />
-                            ) : (
-                              <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover/img:scale-110 duration-500 pointer-events-none" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeImage(idx)}
-                              className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all duration-300 z-10"
-                            >
-                              <HiX className="w-5 h-5 text-white hover:scale-110 transition-transform" />
-                            </button>
-                            <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] text-white font-medium pointer-events-none">
-                              {idx + 1}
-                            </span>
-                          </div>
+                        {contentTypes.map(type => (
+                          <option key={type} value={type} className="bg-dark-800">{type}</option>
                         ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-pink-400 transition-colors">Segmento</label>
+                      <select
+                        value={form.segment}
+                        onChange={e => handleChange('segment', e.target.value)}
+                        className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-pink-500/60 focus:ring-2 focus:ring-pink-500/15 transition-all text-sm appearance-none cursor-pointer"
+                      >
+                        <option value="" className="bg-dark-800">Selecione o segmento</option>
+                        {segments.map(seg => (
+                          <option key={seg.id} value={seg.name} className="bg-dark-800">{seg.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="group">
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-pink-400 transition-colors">Produto Divulgado</label>
+                    <select
+                      value={form.productId}
+                      onChange={e => handleChange('productId', e.target.value)}
+                      className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-pink-500/60 focus:ring-2 focus:ring-pink-500/15 transition-all text-sm appearance-none cursor-pointer"
+                    >
+                      <option value="" className="bg-dark-800">Nenhum produto</option>
+                      {products.map(prod => (
+                        <option key={prod.id} value={prod.id} className="bg-dark-800">
+                          {prod.name} ({prod.segment || 'Sem segmento'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 4 — Distribuição */}
+              <div className="relative pl-6 border-l-2 border-cyan-500/30 hover:border-cyan-500/70 transition-colors duration-300">
+                <div className="absolute -left-[18px] top-0 w-8 h-8 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-cyan-500/30">
+                  4
+                </div>
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-white">Distribuição</h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Onde e por quem esse post será publicado</p>
+                </div>
+                <div className="space-y-5">
+                  {/* Platforms */}
+                  <div>
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">Plataformas</label>
+                    <div className="flex flex-wrap gap-2.5">
+                      {platforms.map(({ name, color }) => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => togglePlatform(name)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border ${
+                            form.platforms.includes(name)
+                              ? 'border-transparent text-white shadow-lg scale-[1.02]'
+                              : 'border-dark-600/50 text-dark-300 hover:border-dark-500 bg-dark-700/30 hover:bg-dark-700/60'
+                          }`}
+                          style={form.platforms.includes(name) ? { backgroundColor: color + '25', borderColor: color, color: color, boxShadow: `0 4px 15px ${color}25` } : {}}
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: form.platforms.includes(name) ? `0 0 8px ${color}` : '' }} />
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Perfis */}
+                  <div>
+                    <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-3">
+                      Perfis de Publicação <span className="normal-case text-dark-500 font-normal">(Collab / opcional)</span>
+                    </label>
+                    {socialProfiles.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {socialProfiles.map(p => {
+                          const isSelected = form.profileIds?.includes(p.id);
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setForm(prev => {
+                                  const profileIds = prev.profileIds || [];
+                                  const updated = profileIds.includes(p.id)
+                                    ? profileIds.filter(id => id !== p.id)
+                                    : [...profileIds, p.id];
+                                  return { ...prev, profileIds: updated };
+                                });
+                              }}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 border ${
+                                isSelected
+                                  ? 'border-brand-500 bg-brand-500/10 text-white shadow-lg'
+                                  : 'border-dark-600/50 text-dark-300 hover:border-dark-500 bg-dark-700/30 hover:bg-dark-700/60'
+                              }`}
+                            >
+                              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {p.avatarUrl ? (
+                                  <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-white text-[9px] font-bold">{p.name.charAt(0).toUpperCase()}</span>
+                                )}
+                              </div>
+                              {p.name}
+                            </button>
+                          );
+                        })}
                       </div>
+                    ) : (
+                      <p className="text-xs text-dark-500 italic">Nenhum perfil cadastrado. Configure em Configurações de Perfil.</p>
                     )}
                   </div>
                 </div>
+              </div>
 
-                {/* Paid Traffic */}
-                <div className="p-5 bg-dark-700/20 rounded-xl border border-dark-600/30 space-y-4 transition-all">
-                  <label className="flex items-center gap-3 cursor-pointer group/check w-fit">
-                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${form.hasPaidTraffic ? 'bg-brand-500 border-brand-500' : 'border-dark-500 bg-dark-700 group-hover/check:border-brand-500/50'}`}>
-                      {form.hasPaidTraffic && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                    </div>
+              {/* STEP 5 — Conteúdo & Mídia */}
+              <div className="relative pl-6 border-l-2 border-amber-500/30 hover:border-amber-500/70 transition-colors duration-300">
+                <div className="absolute -left-[18px] top-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-amber-500/30">
+                  5
+                </div>
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-white">Conteúdo & Mídia</h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Faça upload dos arquivos ou adicione um link externo</p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-dark-600/40 bg-dark-700/20 space-y-4">
+                  <div className="relative group">
+                    <HiOutlineLink className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 group-focus-within:text-amber-400 transition-colors" />
                     <input
-                      type="checkbox"
-                      checked={form.hasPaidTraffic}
-                      onChange={e => handleChange('hasPaidTraffic', e.target.checked)}
+                      type="url"
+                      value={form.fileUrl?.includes('supabase') ? '' : form.fileUrl}
+                      onChange={e => {
+                        const val = e.target.value;
+                        handleChange('fileUrl', val);
+                        if (val && (!form.fileUrls || form.fileUrls.length === 0)) {
+                          handleChange('fileUrls', [val]);
+                        }
+                      }}
+                      placeholder="Link externo (Drive, Pinterest, etc.)"
+                      className="w-full pl-10 pr-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all text-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 text-dark-500 text-xs">
+                    <div className="flex-1 h-px bg-dark-600/50" />
+                    <span className="font-medium">ou faça upload</span>
+                    <div className="flex-1 h-px bg-dark-600/50" />
+                  </div>
+
+                  <label className={`flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${isUploading || (form.fileUrls?.length >= 10) ? 'opacity-50 cursor-not-allowed border-dark-600/30' : 'border-dark-600/50 hover:border-amber-500/50 hover:bg-amber-500/5'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center">
+                      <HiOutlineLink className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <span className="text-sm font-semibold text-dark-200">Clique para selecionar arquivos</span>
+                    <span className="text-xs text-dark-500">Imagens ou vídeos — máximo 10 arquivos</span>
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      disabled={isUploading || (form.fileUrls?.length >= 10)}
                       className="hidden"
                     />
-                    <span className="text-sm font-semibold text-dark-200 group-hover/check:text-white transition-colors">Terá Tráfego Pago?</span>
                   </label>
-                  {form.hasPaidTraffic && (
-                    <div className="relative animate-fade-in group">
-                      <HiOutlineCurrencyDollar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 group-focus-within:text-brand-400 transition-colors" />
-                      <input
-                        type="number"
-                        value={form.budget}
-                        onChange={e => handleChange('budget', e.target.value)}
-                        placeholder="Orçamento (R$)"
-                        className="w-full pl-10 pr-4 py-3 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm"
-                        min="0"
-                        step="0.01"
-                      />
+
+                  {form.fileUrls?.length > 0 && (
+                    <div className="flex flex-wrap gap-3 pt-1">
+                      {form.fileUrls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          draggable
+                          onDragStart={() => handleDragStart(idx)}
+                          onDragOver={handleDragOver}
+                          onDrop={() => handleDrop(idx)}
+                          className={`relative w-20 h-20 rounded-xl overflow-hidden border ${draggedIdx === idx ? 'border-amber-500 opacity-50' : 'border-dark-600/50'} group/img shadow-lg cursor-grab active:cursor-grabbing`}
+                        >
+                          {isVideo(url) ? (
+                            <video src={url} className="w-full h-full object-cover pointer-events-none" muted playsInline />
+                          ) : (
+                            <img src={url} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover/img:scale-110 duration-500 pointer-events-none" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all duration-300 z-10"
+                          >
+                            <HiX className="w-5 h-5 text-white hover:scale-110 transition-transform" />
+                          </button>
+                          <span className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] text-white font-medium pointer-events-none">
+                            {idx + 1}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* STEP 6 — Produção */}
+              <div className="relative pl-6 border-l-2 border-emerald-500/30 hover:border-emerald-500/70 transition-colors duration-300">
+                <div className="absolute -left-[18px] top-0 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-lg shadow-emerald-500/30">
+                  6
+                </div>
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-white">Produção</h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Ferramenta utilizada, status do projeto e tráfego pago</p>
+                </div>
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="group">
+                      <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-emerald-400 transition-colors">Ferramenta</label>
+                      <select
+                        value={form.tool}
+                        onChange={e => handleChange('tool', e.target.value)}
+                        className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all text-sm appearance-none cursor-pointer"
+                      >
+                        {tools.map(t => (
+                          <option key={t} value={t} className="bg-dark-800">{t}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2 group-focus-within:text-emerald-400 transition-colors">Status</label>
+                      <select
+                        value={form.status}
+                        onChange={e => handleChange('status', e.target.value)}
+                        className="w-full px-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all text-sm appearance-none cursor-pointer"
+                      >
+                        {postStatuses.map(s => (
+                          <option key={s.value} value={s.value} className="bg-dark-800">{s.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-dark-600/40 bg-dark-700/20">
+                    <label className="flex items-center gap-3 cursor-pointer group/check w-fit">
+                      <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all flex-shrink-0 ${form.hasPaidTraffic ? 'bg-emerald-500 border-emerald-500' : 'border-dark-500 bg-dark-700 group-hover/check:border-emerald-500/50'}`}>
+                        {form.hasPaidTraffic && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={form.hasPaidTraffic}
+                        onChange={e => handleChange('hasPaidTraffic', e.target.checked)}
+                        className="hidden"
+                      />
+                      <div>
+                        <span className="text-sm font-semibold text-dark-100 group-hover/check:text-white transition-colors block">Terá Tráfego Pago?</span>
+                        <span className="text-xs text-dark-500">Impulsionamento via Meta Ads ou similar</span>
+                      </div>
+                    </label>
+                    {form.hasPaidTraffic && (
+                      <div className="relative animate-fade-in group mt-4">
+                        <HiOutlineCurrencyDollar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 group-focus-within:text-emerald-400 transition-colors" />
+                        <input
+                          type="number"
+                          value={form.budget}
+                          onChange={e => handleChange('budget', e.target.value)}
+                          placeholder="Orçamento previsto (R$)"
+                          className="w-full pl-10 pr-4 py-3.5 bg-dark-700/30 border border-dark-600/50 rounded-xl text-white placeholder-dark-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            {/* Phone Preview Column */}
-            <div className="lg:col-span-1 lg:border-l border-dark-600/30 lg:pl-8 mt-6 lg:mt-0 relative select-none">
-              <div className="sticky top-6 w-full max-w-[300px] mx-auto">
+            {/* === PHONE PREVIEW === */}
+            <div className="hidden lg:block relative select-none">
+              <div className="sticky top-6 w-full">
                 <div className="text-center mb-4 flex items-center justify-center gap-2">
                   <span className="text-xs font-bold text-dark-300 uppercase tracking-widest flex items-center justify-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
@@ -779,7 +841,7 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-dark-600/30 mt-8">
+          <div className="flex justify-end gap-3 pt-8 border-t border-dark-600/30 mt-10">
             <button
               type="button"
               onClick={onClose}
@@ -801,3 +863,4 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
     document.body
   );
 }
+
