@@ -34,6 +34,10 @@ import {
   HiOutlineClock,
   HiOutlineDotsVertical,
   HiOutlineDocumentText,
+  HiOutlineVideoCamera,
+  HiOutlinePhotograph,
+  HiOutlineCamera,
+  HiOutlineCollection,
 } from 'react-icons/hi';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -159,10 +163,29 @@ export default function Calendar() {
     else addEvent({ ...formData, date: formData.date || selectedDate });
   };
 
+  const getContentTypeStyle = (contentType) => {
+    const type = String(contentType || '').toLowerCase();
+    if (type.includes('reels')) {
+      return { color: '#ec4899', label: 'Reels' }; // Pink
+    }
+    if (type.includes('carrossel')) {
+      return { color: '#f59e0b', label: 'Carrossel' }; // Amber
+    }
+    if (type.includes('imagem') || type.includes('estatica') || type.includes('estática') || type.includes('unica') || type.includes('única')) {
+      return { color: '#10b981', label: 'Imagem Estática' }; // Emerald
+    }
+    if (type.includes('story')) {
+      return { color: '#f97316', label: 'Story' }; // Orange
+    }
+    if (type.includes('artigo')) {
+      return { color: '#6366f1', label: 'Artigo' }; // Indigo
+    }
+    return { color: '#94a3b8', label: 'Post' }; // Slate
+  };
+
   const getStatusColor = (item) => {
     if (item.calendarType === 'post') {
-      const found = postStatuses.find(s => s.value === item.status);
-      return found ? found.color : '#94a3b8';
+      return getContentTypeStyle(item.contentType).color;
     }
     if (item.calendarType === 'note') return item.color || '#94a3b8';
     if (item.calendarType === 'event') return '#3b82f6'; // Event blue
@@ -172,8 +195,24 @@ export default function Calendar() {
   const getItemIcon = (item) => {
     if (item.calendarType === 'note') return <HiOutlineAnnotation className="w-3.5 h-3.5 shrink-0" />;
     if (item.calendarType === 'event') return <HiOutlineClock className="w-3.5 h-3.5 shrink-0" />;
-    if (item.calendarType === 'post' && item.status === 'producao' && item.feedback_note) {
-      return <HiOutlineExclamationCircle className="w-3.5 h-3.5 text-warning shrink-0" title="Ajustes Solicitados" />;
+    if (item.calendarType === 'post') {
+      const type = String(item.contentType || '').toLowerCase();
+      if (type.includes('reels')) {
+        return <HiOutlineVideoCamera className="w-3.5 h-3.5 shrink-0" title="Reels" />;
+      }
+      if (type.includes('carrossel')) {
+        return <HiOutlineCollection className="w-3.5 h-3.5 shrink-0" title="Carrossel" />;
+      }
+      if (type.includes('imagem') || type.includes('estatica') || type.includes('estática') || type.includes('unica') || type.includes('única')) {
+        return <HiOutlinePhotograph className="w-3.5 h-3.5 shrink-0" title="Imagem Estática" />;
+      }
+      if (type.includes('story')) {
+        return <HiOutlineCamera className="w-3.5 h-3.5 shrink-0" title="Story" />;
+      }
+      if (type.includes('artigo')) {
+        return <HiOutlineDocumentText className="w-3.5 h-3.5 shrink-0" title="Artigo" />;
+      }
+      return <HiOutlineDocumentText className="w-3.5 h-3.5 shrink-0" title="Post" />;
     }
     return null;
   };
@@ -386,8 +425,11 @@ export default function Calendar() {
                                 backgroundColor: `${itemColor}20` 
                               }}
                             >
-                              <span className="truncate flex-1 flex items-center gap-1 text-dark-100 font-medium">
+                              <span className="truncate flex-1 flex items-center gap-1.5 text-dark-100 font-medium">
                                 {getItemIcon(item)}
+                                {item.calendarType === 'post' && item.status === 'producao' && item.feedback_note && (
+                                  <HiOutlineExclamationCircle className="w-3.5 h-3.5 text-warning shrink-0" title="Ajustes Solicitados" />
+                                )}
                                 {item.calendarType === 'event' && <span className="text-[10px] font-bold opacity-70 shrink-0">{item.startTime}</span>}
                                 {item.title}
                               </span>
@@ -465,6 +507,43 @@ export default function Calendar() {
             </button>
           </div>
 
+          {/* Legenda de Tipos */}
+          <div className="shrink-0 p-3 bg-dark-700/20 rounded-xl border border-dark-600/30 space-y-2">
+            <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider">Legenda de Tipos</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-dark-200">
+                <div className="w-5 h-5 rounded bg-[#ec4899]/10 text-[#ec4899] flex items-center justify-center border border-[#ec4899]/20 shrink-0">
+                  <HiOutlineVideoCamera className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate">Reels</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-dark-200">
+                <div className="w-5 h-5 rounded bg-[#f59e0b]/10 text-[#f59e0b] flex items-center justify-center border border-[#f59e0b]/20 shrink-0">
+                  <HiOutlineCollection className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate">Carrossel</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-dark-200">
+                <div className="w-5 h-5 rounded bg-[#10b981]/10 text-[#10b981] flex items-center justify-center border border-[#10b981]/20 shrink-0">
+                  <HiOutlinePhotograph className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate">Im. Estática</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-dark-200">
+                <div className="w-5 h-5 rounded bg-[#f97316]/10 text-[#f97316] flex items-center justify-center border border-[#f97316]/20 shrink-0">
+                  <HiOutlineCamera className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate">Story</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-dark-200 col-span-2">
+                <div className="w-5 h-5 rounded bg-[#6366f1]/10 text-[#6366f1] flex items-center justify-center border border-[#6366f1]/20 shrink-0">
+                  <HiOutlineDocumentText className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate">Artigo</span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex-1 flex flex-col gap-2 min-h-0">
             <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider shrink-0">Itens do Dia</h4>
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
@@ -498,13 +577,18 @@ export default function Calendar() {
                         </div>
                       )}
 
-                      {item.calendarType === 'post' && item.status && (
-                        <div className="flex items-center gap-1.5">
-                          <span 
-                            className="w-2 h-2 rounded-full" 
-                            style={{ backgroundColor: itemColor }}
-                          />
-                          <span className="text-[10px] text-dark-300 capitalize">{item.status}</span>
+                      {item.calendarType === 'post' && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="flex items-center gap-1.5 text-[10px] text-dark-300 font-medium">
+                            {getItemIcon(item)}
+                            <span className="capitalize">{item.contentType || 'Post'}</span>
+                          </span>
+                          {item.status && (
+                            <>
+                              <span className="text-[10px] text-dark-500">•</span>
+                              <span className="text-[10px] text-dark-300 capitalize">{item.status}</span>
+                            </>
+                          )}
                         </div>
                       )}
 
