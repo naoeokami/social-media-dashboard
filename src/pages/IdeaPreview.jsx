@@ -284,29 +284,39 @@ Comenta ERP no direct — te mostramos como fica seu dashboard."`,
   };
 
   const handleCopyAiPrompt = () => {
-    const promptText = `Aja como um especialista em social media e copywriting. Crie ideias de posts no formato de objeto Javascript para que eu possa copiar e colar direto na ferramenta. Use exatamente esta estrutura de objeto (sem aspas nas chaves e sem campos extras):
+    const promptText = `Você é um Diretor de Arte, Copywriter Sênior e Estrategista de Social Media especializado em marketing B2B, SaaS e tecnologia.
+Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratégica e persuasiva, estruturando-a exatamente no formato de objeto Javascript para que eu possa copiar e colar direto na ferramenta de automação.
+
+### Diretrizes de Copywriting e Design:
+1. **Hook (Gancho)**: O gancho visual deve ser magnético, focado em uma dor forte, desejo ou curiosidade do público-alvo (empresários, gestores, tomadores de decisão).
+2. **Legenda (Copy)**: Use o framework AIDA (Atenção, Interesse, Desejo, Ação) ou PAS (Problema, Agitação, Solução). A linguagem deve ser profissional, moderna, direta e sem clichês bobos. Use parágrafos curtos para leitura dinâmica.
+3. **Facilidades**: Destaque de 2 a 3 benefícios práticos e reais da funcionalidade apresentada, utilizando emojis estratégicos e profissionais.
+4. **Story**: Crie um roteiro de 3 a 4 passos focado em engajamento interativo (Ex: enquete com dor comum -> contextualização rápida -> apresentação da solução -> sticker de perguntas ou link).
+5. **CTA (Chamada para Ação)**: Use CTAs de alto valor, gerando conversão direta ("Comente X para receber o PDF no direct", "Clique no link da bio", etc.).
+
+### Retorne EXATAMENTE este formato de Objeto Javascript (sem aspas nas chaves e sem explicações externas):
 
 {
   dia: 1,
   mes: 7,
-  tipo: 'estatico', // pode ser: 'estatico', 'carrossel', 'video', 'reels', 'story'
-  produto: 'G3ERP', // Nome do produto/sistema
+  tipo: 'estatico', // Opções válidas: 'estatico', 'carrossel', 'video', 'reels', 'story'
+  produto: 'G3ERP', // Nome específico do sistema/produto da marca
   especial: 'Tema ou título da campanha',
-  titulo: 'Título chamativo para a imagem do post',
-  hook: 'Gancho ou frase de impacto curta para a imagem',
-  copy: \`Legenda completa para a publicação com emojis e estrutura atraente.\`,
+  titulo: 'Título curto e chamativo para a capa/imagem',
+  hook: 'Subtítulo curto/frase de impacto para a capa da imagem',
+  copy: \\\`Legenda completa estruturada, com parágrafos bem espaçados, emojis moderados e CTA no final.\\\`,
   facilidades: [
-    { icone: '📊', texto: 'Destaque ou funcionalidade 1' },
-    { icone: '🧾', texto: 'Destaque ou funcionalidade 2' }
+    { icone: '📊', texto: 'Benefício/funcionalidade de impacto 1' },
+    { icone: '⚡', texto: 'Benefício/funcionalidade de impacto 2' }
   ],
-  story: \`Texto ou roteiro para o story de engajamento.\`,
-  cta: 'Chamada para ação clara (ex: Comente ERP)',
-  objetivo: 'Objetivo estratégico do post',
-  tags: ['Tag1', 'Tag2']
+  story: \\\`Roteiro completo passo a passo de Story para engajar e vender.\\\`,
+  cta: 'CTA direto e objetivo (Ex: Comente G3SOFT)',
+  objetivo: 'Objetivo estratégico (Ex: Posicionamento, Autoridade, Captação de Leads)',
+  tags: ['Tags', 'Relevantes', 'SemHashtag']
 }
 
-Crie ideias com base no seguinte briefing ou tema:
-[Insira seu briefing, produto e diretrizes aqui]`;
+### Briefing / Tema da Campanha:
+[Insira aqui o tema do post, produto, público-alvo e quaisquer detalhes extras]`;
 
     navigator.clipboard.writeText(promptText);
     toast.success('Prompt estruturado para IA copiado!');

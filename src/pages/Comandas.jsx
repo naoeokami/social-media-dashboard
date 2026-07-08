@@ -44,6 +44,7 @@ export default function Comandas({ minimal = false }) {
   // Settings for fine-tuning in Percentages (%)
   const [settings, setSettings] = useState({
     qrSize: 50,
+    barcodeHeight: 40,
     qrX: 50,
     qrY: 42,
     textX: 50,
@@ -62,6 +63,7 @@ export default function Comandas({ minimal = false }) {
     
     // Verso Settings
     versoQrSize: 50,
+    versoBarcodeHeight: 40,
     versoQrX: 50,
     versoQrY: 42,
     versoTextX: 50,
@@ -250,7 +252,7 @@ export default function Comandas({ minimal = false }) {
     }
 
     // 3. Draw QR Code or Barcode
-    const content = dataSource === 'link' ? itemData?.link : itemData?.controle;
+    const content = currentCodeType === 'barcode' ? itemData?.controle : (dataSource === 'link' ? itemData?.link : itemData?.controle);
     if (itemData && content && currentCodeType !== 'none') {
       try {
         if (currentCodeType === 'qr') {
@@ -287,7 +289,8 @@ export default function Comandas({ minimal = false }) {
             barcodeImg.onload = () => {
               const qrXPx = (qrX / 100) * canvasWidth - (qrPx / 2);
               const bWidth = qrPx;
-              const bHeight = qrPx * 0.4; // common ratio
+              const currentBarcodeHeight = isVerso ? (currentSettings.versoBarcodeHeight ?? 40) : (currentSettings.barcodeHeight ?? 40);
+              const bHeight = qrPx * (currentBarcodeHeight / 100);
               const qrYPx = (qrY / 100) * canvasHeight - (bHeight / 2);
               ctx.drawImage(barcodeImg, qrXPx, qrYPx, bWidth, bHeight);
               resolve();
@@ -544,7 +547,7 @@ export default function Comandas({ minimal = false }) {
     
     const codeH_in_cm = codeType === 'qr' 
       ? (settings.qrSize/100 * cardW) 
-      : (settings.qrSize/100 * cardW * 0.4);
+      : (settings.qrSize/100 * cardW * (settings.barcodeHeight / 100));
     const codeH_pct = (codeH_in_cm / cardH) * 100;
     
     // Altura do texto (%)
@@ -825,11 +828,30 @@ export default function Comandas({ minimal = false }) {
                         
                         <div className="space-y-3">
                           <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">Tamanho do Código</span>
+                            <span className="text-dark-200">
+                              {versoCodeType === 'barcode' ? 'Largura do Cód. Barras' : 'Tamanho do QR'}
+                            </span>
                             <span className="text-brand-400">{settings.versoQrSize}%</span>
                           </div>
                           <input type="range" min="10" max="100" value={settings.versoQrSize} onChange={(e) => handleSettingChange('versoQrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
                         </div>
+
+                        {versoCodeType === 'barcode' && (
+                          <div className="space-y-3 animate-fade-in">
+                            <div className="flex justify-between text-xs font-bold">
+                              <span className="text-dark-200">Largura Vertical do Cód. Barras</span>
+                              <span className="text-brand-400">{settings.versoBarcodeHeight}%</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="10" 
+                              max="100" 
+                              value={settings.versoBarcodeHeight} 
+                              onChange={(e) => handleSettingChange('versoBarcodeHeight', e.target.value)} 
+                              className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" 
+                            />
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-3">
@@ -975,11 +997,30 @@ export default function Comandas({ minimal = false }) {
                         
                         <div className="space-y-3">
                           <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">Tamanho do QR</span>
+                            <span className="text-dark-200">
+                              {codeType === 'barcode' ? 'Largura do Cód. Barras' : 'Tamanho do QR'}
+                            </span>
                             <span className="text-brand-400">{settings.qrSize}%</span>
                           </div>
                           <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
                         </div>
+
+                        {codeType === 'barcode' && (
+                          <div className="space-y-3 animate-fade-in">
+                            <div className="flex justify-between text-xs font-bold">
+                              <span className="text-dark-200">Largura Vertical do Cód. Barras</span>
+                              <span className="text-brand-400">{settings.barcodeHeight}%</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="10" 
+                              max="100" 
+                              value={settings.barcodeHeight} 
+                              onChange={(e) => handleSettingChange('barcodeHeight', e.target.value)} 
+                              className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" 
+                            />
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-3">
