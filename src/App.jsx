@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import Comandas from './pages/Comandas';
 import ResetPassword from './pages/ResetPassword';
 import IdeaPreview from './pages/IdeaPreview';
+import Activities from './pages/Activities';
 import { useApp } from './contexts/AppContext';
 import PostStatusModal from './components/PostStatusModal';
 
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/comandas" element={<Comandas />} />
             <Route path="/agente" element={<AgentChat />} />
             <Route path="/criador-post" element={<PostCreator />} />
+            <Route path="/atividades" element={<Activities />} />
           </Route>
         )}
       </Routes>

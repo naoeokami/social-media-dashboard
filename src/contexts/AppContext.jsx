@@ -23,6 +23,7 @@ export function AppProvider({ children }) {
   const [events, setEvents] = useState([]);
   const [socialProfiles, setSocialProfiles] = useState([]);
   const [skills, setSkills] = useState([]);
+  const [activities, setActivities] = useState([]);
   
   // Auth state
   const [user, setUser] = useState(null);
@@ -112,6 +113,8 @@ export function AppProvider({ children }) {
         if (localNotes) setNotes(JSON.parse(localNotes));
         const localEvents = localStorage.getItem('socialhub_events');
         if (localEvents) setEvents(JSON.parse(localEvents));
+        const localActivities = localStorage.getItem('socialhub_activities');
+        if (localActivities) setActivities(JSON.parse(localActivities));
 
         const localProfiles = localStorage.getItem('socialhub_social_profiles');
         if (localProfiles) {
@@ -265,11 +268,24 @@ export function AppProvider({ children }) {
             const localEvents = localStorage.getItem('socialhub_events');
             if (localEvents) setEvents(JSON.parse(localEvents));
           }
+
+          const activitiesRes = await supabase.from('activities').select('*').eq('user_id', user.id).order('date', { ascending: false });
+          if (activitiesRes.data) {
+            setActivities(activitiesRes.data.map(a => ({
+              ...a,
+              createdAt: a.created_at
+            })));
+          } else {
+            const localActivities = localStorage.getItem('socialhub_activities');
+            if (localActivities) setActivities(JSON.parse(localActivities));
+          }
         } catch (e) {
           const localNotes = localStorage.getItem('socialhub_notes');
           if (localNotes) setNotes(JSON.parse(localNotes));
           const localEvents = localStorage.getItem('socialhub_events');
           if (localEvents) setEvents(JSON.parse(localEvents));
+          const localActivities = localStorage.getItem('socialhub_activities');
+          if (localActivities) setActivities(JSON.parse(localActivities));
         }
 
         try {
@@ -1050,6 +1066,114 @@ export function AppProvider({ children }) {
     }
   };
 
+  // Activities CRUD
+  const addActivity = async (activity) => {
+    const newActivity = { 
+      id: crypto.randomUUID(), 
+      ...activity, 
+      createdAt: new Date().toISOString() 
+    };
+    
+    setActivities(prev => {
+      const updated = [newActivity, ...prev];
+      localStorage.setItem('socialhub_activities', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (hasSupabaseConfig && user) {
+      const dbActivity = {
+        id: newActivity.id,
+        user_id: user.id,
+        date: newActivity.date,
+        time: newActivity.time,
+        duration: newActivity.duration ? parseFloat(newActivity.duration) : null,
+        title: newActivity.title,
+        description: newActivity.description,
+        category: newActivity.category,
+        created_at: newActivity.createdAt
+      };
+
+      try {
+        const { error } = await supabase.from('activities').insert(dbActivity);
+        if (error) {
+          console.warn("Supabase addActivity Error:", error);
+          if (error.code !== '42P01') {
+            toast.error(`Falha ao sincronizar com banco: ${error.message}`);
+          }
+        } else {
+          toast.success("Atividade salva!");
+        }
+      } catch (err) {
+        console.warn("Erro ao salvar atividade no Supabase:", err);
+      }
+    } else {
+      toast.success("Atividade salva localmente!");
+    }
+    return newActivity;
+  };
+
+  const updateActivity = async (id, updatedData) => {
+    setActivities(prev => {
+      const updated = prev.map(act => act.id === id ? { ...act, ...updatedData } : act);
+      localStorage.setItem('socialhub_activities', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (hasSupabaseConfig && user) {
+      const dbActivity = { ...updatedData };
+      delete dbActivity.id;
+      delete dbActivity.user_id;
+      delete dbActivity.created_at;
+      delete dbActivity.createdAt;
+      
+      if (dbActivity.duration !== undefined) {
+        dbActivity.duration = dbActivity.duration ? parseFloat(dbActivity.duration) : null;
+      }
+
+      try {
+        const { error } = await supabase.from('activities').update(dbActivity).eq('id', id);
+        if (error) {
+          console.warn("Supabase updateActivity Error:", error);
+          if (error.code !== '42P01') {
+            toast.error("Erro ao sincronizar atualização.");
+          }
+        } else {
+          toast.success("Atividade atualizada!");
+        }
+      } catch (err) {
+        console.warn("Erro ao atualizar atividade no Supabase:", err);
+      }
+    } else {
+      toast.success("Atividade atualizada localmente!");
+    }
+  };
+
+  const deleteActivity = async (id) => {
+    setActivities(prev => {
+      const updated = prev.filter(act => act.id !== id);
+      localStorage.setItem('socialhub_activities', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (hasSupabaseConfig && user) {
+      try {
+        const { error } = await supabase.from('activities').delete().eq('id', id);
+        if (error) {
+          console.warn("Supabase deleteActivity Error:", error);
+          if (error.code !== '42P01') {
+            toast.error("Erro ao sincronizar exclusão.");
+          }
+        } else {
+          toast.success("Atividade removida!");
+        }
+      } catch (err) {
+        console.warn("Erro ao deletar atividade no Supabase:", err);
+      }
+    } else {
+      toast.success("Atividade removida localmente!");
+    }
+  };
+
   const updateProfile = (data) => {
     setProfile(data);
     localStorage.setItem('socialhub_profile', JSON.stringify(data));
@@ -1074,6 +1198,7 @@ export function AppProvider({ children }) {
     events, addEvent, updateEvent, deleteEvent,
     socialProfiles, addSocialProfile, updateSocialProfile, deleteSocialProfile,
     skills, addSkill, updateSkill, deleteSkill,
+    activities, addActivity, updateActivity, deleteActivity,
     sidebarOpen, setSidebarOpen,
     profile, updateProfile,
     apiKeys, updateApiKeys,

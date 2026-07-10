@@ -15,6 +15,7 @@ import {
   HiOutlineQrcode,
   HiOutlineTemplate,
   HiOutlineEye,
+  HiOutlineBookOpen,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -26,6 +27,7 @@ const navItems = [
   { path: '/visualizacao-ideia', label: 'Visualização de Ideia', icon: HiOutlineEye },
   // { path: '/relatorios', label: 'Relatórios', icon: HiOutlineChartBar }, // Em desenvolvimento
   { path: '/tarefas', label: 'Guia de Tarefas', icon: HiOutlineClipboardList },
+  { path: '/atividades', label: 'Diário de Atividades', icon: HiOutlineBookOpen },
   { path: '/produtos', label: 'Produtos e Segmentos', icon: HiOutlineShoppingBag },
   { path: '/comandas', label: 'Gerar Comandas', icon: HiOutlineQrcode },
   { path: '/agente', label: 'Agente IA', icon: HiOutlineSparkles },
