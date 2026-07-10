@@ -275,8 +275,19 @@ export default function Comandas({ minimal = false }) {
         } else {
           // CODE128 Barcode
           const barcodeCanvas = document.createElement('canvas');
+          const bWidth = qrPx;
+          const currentBarcodeHeight = isVerso ? (currentSettings.versoBarcodeHeight ?? 40) : (currentSettings.barcodeHeight ?? 40);
+          const bHeight = qrPx * (currentBarcodeHeight / 100);
+
+          // Estimate number of modules in CODE128 (approx 11 per char + 35 for start/stop/check, quiet zone is 0 as margin: 0)
+          const estimatedModules = (content.length * 11) + 35;
+          // Determine single bar width dynamically so the generated barcode matches target resolution
+          const optWidth = Math.max(2, Math.floor(bWidth / estimatedModules));
+
           JsBarcode(barcodeCanvas, content, {
             format: "CODE128",
+            width: optWidth,
+            height: Math.round(bHeight),
             displayValue: false,
             margin: 0,
             background: "transparent"
@@ -288,11 +299,17 @@ export default function Comandas({ minimal = false }) {
           await new Promise((resolve) => {
             barcodeImg.onload = () => {
               const qrXPx = (qrX / 100) * canvasWidth - (qrPx / 2);
-              const bWidth = qrPx;
-              const currentBarcodeHeight = isVerso ? (currentSettings.versoBarcodeHeight ?? 40) : (currentSettings.barcodeHeight ?? 40);
-              const bHeight = qrPx * (currentBarcodeHeight / 100);
               const qrYPx = (qrY / 100) * canvasHeight - (bHeight / 2);
-              ctx.drawImage(barcodeImg, qrXPx, qrYPx, bWidth, bHeight);
+
+              const actualW = barcodeImg.width;
+              // Draw the barcode image at its native width (centered) and height to avoid any scaling artifacts
+              const drawW = actualW <= bWidth ? actualW : bWidth;
+              const centeredXPx = qrXPx + (bWidth - drawW) / 2;
+              
+              const prevSmoothing = ctx.imageSmoothingEnabled;
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(barcodeImg, centeredXPx, qrYPx, drawW, bHeight);
+              ctx.imageSmoothingEnabled = prevSmoothing;
               resolve();
             };
           });
