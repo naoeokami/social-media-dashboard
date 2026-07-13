@@ -21,6 +21,26 @@ import { toPng } from 'html-to-image';
 import { supabase, hasSupabaseConfig } from '../lib/supabase';
 import PostModal from '../components/PostModal';
 
+const initialManualForm = {
+  dia: 1,
+  mes: 7,
+  tipo: 'estatico',
+  produto: 'G3ERP',
+  especial: '',
+  titulo: '',
+  hook: '',
+  copy: '',
+  facilidades: [
+    { icone: '📊', texto: '' },
+    { icone: '🧾', texto: '' },
+    { icone: '📈', texto: '' }
+  ],
+  story: '',
+  cta: '',
+  objetivo: '',
+  tags: []
+};
+
 export default function IdeaPreview() {
   const [ideas, setIdeas] = useState([]);
   const [selectedIdea, setSelectedIdea] = useState(null);
@@ -32,6 +52,8 @@ export default function IdeaPreview() {
   const [search, setSearch] = useState('');
   const [filterProduct, setFilterProduct] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [importTab, setImportTab] = useState('manual'); // 'manual' | 'object' | 'csv'
+  const [manualForm, setManualForm] = useState(initialManualForm);
 
   const imagePreviewRef = useRef(null);
   const { user, addPost, products } = useApp();
@@ -322,6 +344,25 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
     toast.success('Prompt estruturado para IA copiado!');
   };
 
+  const handleSaveManual = async () => {
+    if (!manualForm.titulo.trim()) {
+      toast.error('O título é obrigatório.');
+      return;
+    }
+
+    const newIdea = {
+      ...manualForm,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString()
+    };
+
+    const newIdeas = [newIdea, ...ideas];
+    await saveAllIdeas(newIdeas, [newIdea]);
+    setSelectedIdea(newIdea);
+    setShowImportModal(false);
+    toast.success('Nova ideia criada com sucesso!');
+  };
+
   // Safe JS object parser
   const handleParseText = () => {
     if (!rawText.trim()) {
@@ -595,7 +636,11 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
                 Prompt
               </button>
               <button
-                onClick={() => setShowImportModal(true)}
+                onClick={() => {
+                  setManualForm(initialManualForm);
+                  setImportTab('manual');
+                  setShowImportModal(true);
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 gradient-brand rounded-xl text-white text-xs font-semibold hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all"
               >
                 <HiOutlinePlus className="w-4 h-4" />
@@ -1434,7 +1479,11 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
               Selecione uma ideia existente no painel esquerdo ou clique em "Nova" para importar um novo objeto ou arquivo CSV.
             </p>
             <button
-              onClick={() => setShowImportModal(true)}
+              onClick={() => {
+                setManualForm(initialManualForm);
+                setImportTab('manual');
+                setShowImportModal(true);
+              }}
               className="px-5 py-2.5 gradient-brand rounded-xl text-white text-sm font-semibold hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all"
             >
               Criar Nova Ideia
@@ -1452,7 +1501,7 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
             <div className="p-6 border-b border-dark-600/50 flex justify-between items-center text-left">
               <div>
                 <h3 className="font-extrabold text-white text-lg">Nova Ideia de Post</h3>
-                <p className="text-xs text-dark-400">Adicione ideias colando o código em padrão JS ou enviando uma planilha CSV.</p>
+                <p className="text-xs text-dark-400">Adicione ideias manualmente, colando o código em padrão JS ou enviando uma planilha CSV.</p>
               </div>
               <button 
                 onClick={() => setShowImportModal(false)}
@@ -1462,38 +1511,230 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-6 text-left">
-              
-              {/* CSV Upload Area */}
-              <div>
-                <span className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2">Importar por CSV</span>
-                <label className="flex flex-col items-center justify-center border-2 border-dashed border-dark-600 hover:border-brand-500/50 rounded-2xl p-6 cursor-pointer bg-dark-700/20 hover:bg-dark-700/30 transition-all group">
-                  <HiOutlineUpload className="w-8 h-8 text-dark-400 group-hover:text-brand-400 transition-colors mb-2" />
-                  <span className="text-xs font-bold text-white mb-1">Selecione ou arraste seu arquivo CSV</span>
-                  <span className="text-[10px] text-dark-400 text-center">Cabeçalhos suportados: dia, mes, tipo, produto, especial, titulo, hook, copy, facilidades, story, cta, objetivo, tags</span>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleCSVUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+            <div className="flex border-b border-dark-600/50 bg-dark-850 px-6 py-2 gap-4">
+              <button
+                onClick={() => setImportTab('manual')}
+                className={`pb-2 pt-2 border-b-2 text-xs font-bold transition-all ${
+                  importTab === 'manual'
+                    ? 'border-brand-500 text-brand-400'
+                    : 'border-transparent text-dark-400 hover:text-white'
+                }`}
+              >
+                Preencher Manualmente
+              </button>
+              <button
+                onClick={() => setImportTab('object')}
+                className={`pb-2 pt-2 border-b-2 text-xs font-bold transition-all ${
+                  importTab === 'object'
+                    ? 'border-brand-500 text-brand-400'
+                    : 'border-transparent text-dark-400 hover:text-white'
+                }`}
+              >
+                Colar Objeto JS
+              </button>
+              <button
+                onClick={() => setImportTab('csv')}
+                className={`pb-2 pt-2 border-b-2 text-xs font-bold transition-all ${
+                  importTab === 'csv'
+                    ? 'border-brand-500 text-brand-400'
+                    : 'border-transparent text-dark-400 hover:text-white'
+                }`}
+              >
+                Importar CSV
+              </button>
+            </div>
 
-              <div className="flex items-center my-1">
-                <hr className="flex-1 border-dark-600/40" />
-                <span className="px-3 text-xs font-bold text-dark-400">OU</span>
-                <hr className="flex-1 border-dark-600/40" />
-              </div>
+            <div className="p-6 flex flex-col gap-5 text-left max-h-[55vh] overflow-y-auto">
+              {importTab === 'manual' && (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Título *</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: G3ERP: o dia a dia..."
+                        value={manualForm.titulo}
+                        onChange={e => setManualForm({ ...manualForm, titulo: e.target.value })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Produto</label>
+                      <input
+                        type="text"
+                        list="products-list"
+                        placeholder="Ex: G3ERP"
+                        value={manualForm.produto}
+                        onChange={e => setManualForm({ ...manualForm, produto: e.target.value })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                      <datalist id="products-list">
+                        {products.map(p => (
+                          <option key={p.id} value={p.name} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
 
-              {/* JS Object Text Input */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-dark-300 uppercase tracking-wider">Colar Objeto Javascript</label>
-                <textarea
-                  rows="8"
-                  value={rawText}
-                  onChange={e => setRawText(e.target.value)}
-                  placeholder={`dia: 1,
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Dia</label>
+                      <input
+                        type="number"
+                        value={manualForm.dia}
+                        onChange={e => setManualForm({ ...manualForm, dia: parseInt(e.target.value) || 1 })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Mês</label>
+                      <input
+                        type="number"
+                        value={manualForm.mes}
+                        onChange={e => setManualForm({ ...manualForm, mes: parseInt(e.target.value) || 1 })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Tipo</label>
+                      <select
+                        value={manualForm.tipo}
+                        onChange={e => setManualForm({ ...manualForm, tipo: e.target.value })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      >
+                        <option value="estatico">Estático</option>
+                        <option value="carrossel">Carrossel</option>
+                        <option value="video">Vídeo</option>
+                        <option value="reels">Reels / Story</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Tema Especial</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Abertura de Julho"
+                        value={manualForm.especial}
+                        onChange={e => setManualForm({ ...manualForm, especial: e.target.value })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">CTA</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Comenta ERP"
+                        value={manualForm.cta}
+                        onChange={e => setManualForm({ ...manualForm, cta: e.target.value })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Objetivo</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Posicionamento"
+                        value={manualForm.objetivo}
+                        onChange={e => setManualForm({ ...manualForm, objetivo: e.target.value })}
+                        className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Gancho (Hook)</label>
+                    <textarea
+                      rows="2"
+                      placeholder="Subtítulo curto ou frase de impacto para a capa..."
+                      value={manualForm.hook}
+                      onChange={e => setManualForm({ ...manualForm, hook: e.target.value })}
+                      className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500 resize-none font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Legenda (Copy)</label>
+                    <textarea
+                      rows="4"
+                      placeholder="Legenda completa estruturada..."
+                      value={manualForm.copy}
+                      onChange={e => setManualForm({ ...manualForm, copy: e.target.value })}
+                      className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500 font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Texto Story</label>
+                    <textarea
+                      rows="2"
+                      placeholder="Roteiro ou texto do Story..."
+                      value={manualForm.story}
+                      onChange={e => setManualForm({ ...manualForm, story: e.target.value })}
+                      className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500 font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-400 uppercase mb-2">Facilidades (Destaques da Imagem)</label>
+                    <div className="flex flex-col gap-2">
+                      {[0, 1, 2].map(index => {
+                        const fac = manualForm.facilidades[index] || { icone: '', texto: '' };
+                        return (
+                          <div key={index} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              placeholder="Ícone"
+                              value={fac.icone}
+                              onChange={e => {
+                                const newFacs = [...manualForm.facilidades];
+                                newFacs[index] = { ...fac, icone: e.target.value };
+                                setManualForm({ ...manualForm, facilidades: newFacs });
+                              }}
+                              className="w-14 text-center px-2 py-1.5 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                            />
+                            <input
+                              type="text"
+                              placeholder={`Texto do destaque ${index + 1}`}
+                              value={fac.texto}
+                              onChange={e => {
+                                const newFacs = [...manualForm.facilidades];
+                                newFacs[index] = { ...fac, texto: e.target.value };
+                                setManualForm({ ...manualForm, facilidades: newFacs });
+                              }}
+                              className="flex-1 px-3 py-1.5 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-400 uppercase mb-1">Tags (separadas por vírgula)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: ERP, Finanças, Julho"
+                      value={manualForm.tags ? manualForm.tags.join(', ') : ''}
+                      onChange={e => setManualForm({
+                        ...manualForm,
+                        tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
+                      })}
+                      className="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {importTab === 'object' && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-dark-300 uppercase tracking-wider">Colar Objeto Javascript</label>
+                  <textarea
+                    rows="8"
+                    value={rawText}
+                    onChange={e => setRawText(e.target.value)}
+                    placeholder={`dia: 1,
 mes: 7,
 tipo: 'estatico',
 produto: 'G3ERP',
@@ -1505,10 +1746,27 @@ facilidades: [
   { icone: '📊', texto: 'Dashboard...' }
 ],
 tags: ['G3ERP']`}
-                  className="w-full p-4 bg-dark-900 border border-dark-600/50 rounded-2xl text-xs text-slate-300 font-mono focus:outline-none focus:border-brand-500 transition-all resize-none"
-                />
-              </div>
+                    className="w-full p-4 bg-dark-900 border border-dark-600/50 rounded-2xl text-xs text-slate-350 font-mono focus:outline-none focus:border-brand-500 transition-all resize-none"
+                  />
+                </div>
+              )}
 
+              {importTab === 'csv' && (
+                <div>
+                  <span className="block text-xs font-bold text-dark-300 uppercase tracking-wider mb-2">Importar por CSV</span>
+                  <label className="flex flex-col items-center justify-center border-2 border-dashed border-dark-600 hover:border-brand-500/50 rounded-2xl p-6 cursor-pointer bg-dark-700/20 hover:bg-dark-700/30 transition-all group">
+                    <HiOutlineUpload className="w-8 h-8 text-dark-400 group-hover:text-brand-400 transition-colors mb-2" />
+                    <span className="text-xs font-bold text-white mb-1">Selecione ou arraste seu arquivo CSV</span>
+                    <span className="text-[10px] text-dark-400 text-center font-medium max-w-md">Cabeçalhos suportados: dia, mes, tipo, produto, especial, titulo, hook, copy, facilidades, story, cta, objetivo, tags</span>
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleCSVUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="p-6 border-t border-dark-600/50 flex justify-end gap-3 bg-dark-850">
@@ -1518,14 +1776,23 @@ tags: ['G3ERP']`}
               >
                 Cancelar
               </button>
-              <button
-                onClick={handleParseText}
-                className="px-6 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all"
-              >
-                Importar Objeto
-              </button>
+              {importTab === 'manual' && (
+                <button
+                  onClick={handleSaveManual}
+                  className="px-6 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all"
+                >
+                  Salvar Ideia
+                </button>
+              )}
+              {importTab === 'object' && (
+                <button
+                  onClick={handleParseText}
+                  className="px-6 py-2 gradient-brand text-white rounded-xl text-xs font-bold hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all"
+                >
+                  Importar Objeto
+                </button>
+              )}
             </div>
-
           </div>
         </div>
       )}
