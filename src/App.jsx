@@ -33,7 +33,7 @@ export default function App() {
 
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ className: 'bg-dark-800 text-white border border-dark-600/50' }} />
+      <Toaster position="top-right" toastOptions={{ className: 'bg-dark-700 text-dark-50 border border-dark-600 font-medium' }} />
       <Routes>
         <Route path="/p/:id" element={<PublicApproval />} />
         <Route path="/gerador-de-comandas" element={

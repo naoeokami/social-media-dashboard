@@ -10,10 +10,40 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #020617;
-  color: #e2e8f0;
+  background-color: #ffffff;
+  color: #1f2937;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, th, label {
+  color: #111827 !important;
+}
+
+/* Override text-white where light background makes it unreadable */
+.glass-card .text-white:not(button):not(a):not(.badge):not(.btn-text):not(.text-white-keep),
+.bg-dark-800 .text-white:not(button):not(a):not(.badge):not(.btn-text):not(.text-white-keep),
+.bg-dark-900 .text-white:not(button):not(a):not(.badge):not(.btn-text):not(.text-white-keep),
+aside .text-white:not(button):not(a):not(.badge):not(.btn-text):not(.text-white-keep),
+header .text-white:not(button):not(a):not(.badge):not(.btn-text):not(.text-white-keep) {
+  color: #111827 !important;
+}
+
+/* Fix slate text contrast on light backgrounds, except inside mockups/alerts */
+.text-slate-350:not(.visual-preview *):not(.gradient-brand *):not(.bg-slate-950 *):not(.bg-indigo-950 *):not(.text-white-keep) {
+  color: #475569 !important;
+}
+.text-slate-300:not(.visual-preview *):not(.gradient-brand *):not(.bg-slate-950 *):not(.bg-indigo-950 *):not(.text-white-keep) {
+  color: #475569 !important;
+}
+.text-slate-400:not(.visual-preview *):not(.gradient-brand *):not(.bg-slate-950 *):not(.bg-indigo-950 *):not(.text-white-keep) {
+  color: #64748b !important;
+}
+.text-slate-200:not(.visual-preview *):not(.gradient-brand *):not(.bg-slate-950 *):not(.bg-indigo-950 *):not(.text-white-keep) {
+  color: #334155 !important;
+}
+.text-white-keep {
+  color: #ffffff !important;
 }
 
 /* Custom Scrollbar */
@@ -22,54 +52,52 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94a3b8;
 }
 
-/* Glass Effect Utility */
+/* Flat Modern Card Utilities */
 @layer utilities {
   .glass {
-    background: rgba(15, 23, 42, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(51, 65, 85, 0.5);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
   }
   .glass-card {
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(51, 65, 85, 0.4);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 1rem;
     transition: all 0.3s ease;
   }
   .glass-card:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 0 30px rgba(99, 102, 241, 0.1);
+    border-color: rgba(255, 140, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   }
   .gradient-brand {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+    background: linear-gradient(135deg, #ff8c00, #ffa534);
   }
   .gradient-text {
-    background: linear-gradient(135deg, #6366f1, #a855f7);
+    background: linear-gradient(135deg, #ff8c00, #ffa534);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .glow-brand {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3), 0 0 60px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 4px 15px rgba(255, 140, 0, 0.15);
   }
 }
 
 /* Rich Text Editor Styles */
 .rich-editor {
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  color: #e2e8f0;
+  color: #1f2937;
   min-height: 120px;
   padding: 0.75rem;
   font-family: 'Inter', sans-serif;
@@ -80,8 +108,8 @@ body {
 }
 .rich-editor:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: #ff8c00;
+  box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.15);
 }
 
 /* Calendar Day Hover */

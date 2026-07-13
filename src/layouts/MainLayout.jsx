@@ -4,21 +4,13 @@ import TopBar from '../components/TopBar';
 import { useApp } from '../contexts/AppContext';
 
 export default function MainLayout() {
-  const { sidebarOpen } = useApp();
-
   return (
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 flex flex-col pb-28">
+      <TopBar />
+      <main className="p-4 sm:p-6 flex-1 overflow-x-hidden">
+        <Outlet />
+      </main>
       <Sidebar />
-      <div
-        className={`transition-all duration-300 ease-in-out ${
-          sidebarOpen ? 'md:ml-64' : 'md:ml-20'
-        } ml-0`}
-      >
-        <TopBar />
-        <main className="p-4 sm:p-6 min-h-[calc(100vh-4rem)] overflow-x-hidden">
-          <Outlet />
-        </main>
-      </div>
     </div>
   );
 }

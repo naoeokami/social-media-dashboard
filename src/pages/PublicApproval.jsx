@@ -196,14 +196,14 @@ export default function PublicApproval() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 lg:flex">
+    <div className="min-h-screen bg-dark-900 text-dark-100 lg:flex">
       {/* Sidebar - Fixed on desktop, hidden on mobile or shown as header */}
-      <aside className="lg:w-[320px] lg:h-screen lg:fixed lg:left-0 lg:top-0 lg:border-r border-slate-800/50 bg-[#020617] p-6 overflow-y-auto z-20">
+      <aside className="lg:w-[320px] lg:h-screen lg:fixed lg:left-0 lg:top-0 lg:border-r border-dark-600 bg-dark-800 p-6 overflow-y-auto z-20">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center shadow-lg glow-brand">
             <span className="text-white font-bold text-lg">S</span>
           </div>
-          <span className="font-bold text-xl tracking-tight text-white">SocialHub</span>
+          <span className="font-bold text-xl tracking-tight text-dark-50">SocialHub</span>
         </div>
 
         <div className="space-y-8">

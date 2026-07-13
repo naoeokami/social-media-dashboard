@@ -1087,22 +1087,22 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
 
               {/* TAB 2: INSTAGRAM FEED POST PREVIEW */}
               {activePreviewTab === 'instagram' && (
-                <div className="w-full max-w-[460px] bg-dark-900 border border-dark-600/50 rounded-2xl overflow-hidden shadow-2xl">
+                <div className="w-full max-w-[460px] bg-dark-900 border border-dark-600 rounded-2xl overflow-hidden shadow-2xl">
                   {/* Post Header */}
-                  <div className="flex items-center justify-between p-3 border-b border-dark-700">
+                  <div className="flex items-center justify-between p-3 border-b border-dark-600">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center font-bold text-xs text-white">
                         G3
                       </div>
                       <div className="text-left">
                         <div className="flex items-center gap-1">
-                          <span className="text-xs font-bold text-white">g3softecnologia</span>
+                          <span className="text-xs font-bold text-dark-50">g3softecnologia</span>
                           <HiOutlineCheckCircle className="w-3.5 h-3.5 text-blue-500 fill-current" />
                         </div>
                         <span className="text-[10px] text-dark-400">Patrocinado / Campanha</span>
                       </div>
                     </div>
-                    <button className="text-white font-bold text-lg leading-none">•••</button>
+                    <button className="text-dark-50 font-bold text-lg leading-none">•••</button>
                   </div>
 
                   {/* Render the actual 1:1 image mock in the center */}
@@ -1150,7 +1150,7 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="flex justify-between items-center p-3 text-white">
+                  <div className="flex justify-between items-center p-3 text-dark-50">
                     <div className="flex gap-4">
                       <HiOutlineHeart className="w-6 h-6 hover:text-red-500 cursor-pointer transition-colors" />
                       <HiOutlineChat className="w-6 h-6 cursor-pointer" />
@@ -1161,9 +1161,9 @@ Sua tarefa é planejar e criar uma ideia de post altamente engajadora, estratég
 
                   {/* Likes and Caption */}
                   <div className="px-4 pb-4 flex flex-col gap-1 text-left">
-                    <span className="text-xs font-bold text-white">Curtido por milhares de empresas</span>
-                    <div className="text-xs text-slate-300 leading-relaxed font-normal">
-                      <span className="font-bold text-white mr-1.5">g3softecnologia</span>
+                    <span className="text-xs font-bold text-dark-50">Curtido por milhares de empresas</span>
+                    <div className="text-xs text-dark-200 leading-relaxed font-normal">
+                      <span className="font-bold text-dark-50 mr-1.5">g3softecnologia</span>
                       <span className="whitespace-pre-line">{selectedIdea.copy}</span>
                     </div>
                     {selectedIdea.tags && selectedIdea.tags.length > 0 && (
