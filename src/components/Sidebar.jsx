@@ -118,7 +118,7 @@ export default function Sidebar() {
                   <Icon className="w-5.5 h-5.5 flex-shrink-0" />
                   
                   {/* Tooltip */}
-                  <span className="absolute bottom-14 bg-dark-50 text-white text-[10px] font-semibold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-[60] border border-dark-200">
+                  <span className="absolute bottom-14 bg-white text-dark-50 text-[10px] font-semibold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-[60] border border-dark-200">
                     {label}
                   </span>
 

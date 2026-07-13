@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS activities (
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   time TEXT,
   duration NUMERIC(5,2),
-  title TEXT NOT NULL,
+  title TEXT NOT NULL,  
   description TEXT,
   category TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
