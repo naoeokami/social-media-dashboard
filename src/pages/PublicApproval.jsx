@@ -35,6 +35,236 @@ export default function PublicApproval() {
   const { id } = useParams();
   const [post, setPost] = useState(null);
   const [status, setStatus] = useState(null);
+
+  // States para interação do cliente com Stickers do Story
+  const [pollVotes, setPollVotes] = useState({});
+  const [questionReplies, setQuestionReplies] = useState({});
+  const [sliderValues, setSliderValues] = useState({});
+  const [countdownTicks, setCountdownTicks] = useState({});
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!post || !post.storyStickers) return;
+      const newTicks = {};
+      post.storyStickers.forEach(sticker => {
+        if (sticker.type === 'countdown' && sticker.targetDate) {
+          const diff = new Date(sticker.targetDate).getTime() - Date.now();
+          if (diff > 0) {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            const formatNum = (n) => String(n).padStart(2, '0');
+            newTicks[sticker.id] = {
+              days: formatNum(days),
+              hours: formatNum(hours),
+              minutes: formatNum(minutes),
+              seconds: formatNum(seconds)
+            };
+          } else {
+            newTicks[sticker.id] = { days: '00', hours: '00', minutes: '00', seconds: '00' };
+          }
+        }
+      });
+      setCountdownTicks(newTicks);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [post]);
+
+  const renderApprovalStickers = (stickers) => {
+    if (!stickers || stickers.length === 0) return null;
+    return stickers.map((sticker) => {
+      let content = null;
+      if (sticker.type === 'poll') {
+        const votedIdx = pollVotes[sticker.id];
+        const hasVoted = votedIdx !== undefined;
+        
+        const mockPercentages = [];
+        if (hasVoted) {
+          const optsCount = sticker.options?.length || 2;
+          let remaining = 100;
+          for (let i = 0; i < optsCount; i++) {
+            if (i === votedIdx) {
+              mockPercentages.push(Math.round(55 + Math.random() * 20));
+            } else {
+              mockPercentages.push(0);
+            }
+          }
+          const votedPct = mockPercentages[votedIdx];
+          const restPct = Math.round((100 - votedPct) / (optsCount - 1 || 1));
+          for (let i = 0; i < optsCount; i++) {
+            if (i !== votedIdx) {
+              mockPercentages[i] = restPct;
+            }
+          }
+          const sum = mockPercentages.reduce((a, b) => a + b, 0);
+          if (sum !== 100) {
+            mockPercentages[0] += (100 - sum);
+          }
+        }
+
+        content = (
+          <div className="bg-white text-black p-3.5 rounded-3xl w-52 shadow-2xl border border-neutral-100/50 flex flex-col items-center gap-2 select-none pointer-events-auto">
+            <span className="text-[11px] font-black text-center text-neutral-800 line-clamp-2 uppercase tracking-wide">
+              {sticker.question || 'Faça uma enquete'}
+            </span>
+            <div className="w-full space-y-1.5 mt-1">
+              {(sticker.options || ['Sim', 'Não']).map((opt, oIdx) => {
+                const isSelected = votedIdx === oIdx;
+                const pct = hasVoted ? mockPercentages[oIdx] : 0;
+                
+                return (
+                  <button 
+                    key={oIdx} 
+                    type="button"
+                    onClick={() => {
+                      if (!hasVoted) {
+                        setPollVotes(prev => ({ ...prev, [sticker.id]: oIdx }));
+                      }
+                    }}
+                    className="w-full relative overflow-hidden h-9 rounded-2xl text-[10px] font-extrabold text-center transition-all border border-neutral-200 flex items-center justify-center"
+                    style={{ backgroundColor: isSelected ? '#ea580c10' : '#f5f5f5', borderColor: isSelected ? '#ea580c50' : '#e5e5e5' }}
+                  >
+                    {hasVoted && (
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 bg-neutral-200/80 transition-all duration-700 ease-out" 
+                        style={{ width: `${pct}%`, backgroundColor: isSelected ? '#ea580c25' : '#e5e5e5' }}
+                      />
+                    )}
+                    
+                    <span className="relative z-10 text-neutral-700 px-2 truncate">
+                      {opt || `Opção ${oIdx + 1}`}
+                    </span>
+                    
+                    {hasVoted && (
+                      <span className="absolute right-3.5 z-10 text-[10px] font-black text-neutral-800">
+                        {pct}%
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      } else if (sticker.type === 'question') {
+        const replyText = questionReplies[sticker.id] || '';
+        const isSent = replyText.startsWith('__SENT__');
+        const typedText = isSent ? replyText.replace('__SENT__', '') : replyText;
+
+        content = (
+          <div className="bg-white rounded-3xl overflow-hidden w-52 shadow-2xl border border-neutral-100 flex flex-col pointer-events-auto">
+            <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white text-center py-2 px-3 text-[10px] font-black tracking-wide uppercase">
+              {sticker.question || 'Faça uma pergunta'}
+            </div>
+            <div className="p-2.5 bg-neutral-50 flex flex-col gap-1.5 border-t border-neutral-100">
+              {isSent ? (
+                <div className="text-center py-3 text-[10px] font-bold text-green-600 animate-fade-in">
+                  ✓ Resposta enviada!
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={typedText}
+                    onChange={(e) => setQuestionReplies(prev => ({ ...prev, [sticker.id]: e.target.value }))}
+                    placeholder="Responda aqui..."
+                    className="w-full bg-white border border-neutral-200 rounded-2xl py-2 px-3 text-[9px] text-neutral-700 font-bold focus:outline-none focus:border-brand-500 placeholder-neutral-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typedText.trim()) {
+                        setQuestionReplies(prev => ({ ...prev, [sticker.id]: `__SENT__${typedText}` }));
+                      }
+                    }}
+                    className="w-full py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-[8px] font-black tracking-wider rounded-xl uppercase transition-colors"
+                  >
+                    Enviar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      } else if (sticker.type === 'link') {
+        content = (
+          <a
+            href={sticker.url || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white text-blue-500 px-5 py-2.5 rounded-full shadow-2xl border border-neutral-100 flex items-center justify-center gap-1 font-black text-[11px] tracking-wider select-none pointer-events-auto uppercase hover:scale-[1.05] transition-transform"
+          >
+            🔗 {sticker.linkText || 'SAIBA MAIS'}
+          </a>
+        );
+      } else if (sticker.type === 'slider') {
+        const val = sliderValues[sticker.id] || 50;
+        
+        content = (
+          <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl w-48 shadow-2xl border border-neutral-200/50 flex flex-col items-center gap-1.5 select-none pointer-events-auto">
+            <span className="text-[10px] font-black text-center text-neutral-700 line-clamp-2 uppercase">
+              {sticker.question || 'Gostou?'}
+            </span>
+            <div className="w-full flex items-center justify-center py-3 relative">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={val}
+                onChange={(e) => {
+                  const newval = Number(e.target.value);
+                  setSliderValues(prev => ({ ...prev, [sticker.id]: newval }));
+                }}
+                className="w-full accent-brand-500 bg-neutral-200 h-1.5 rounded-lg appearance-none cursor-pointer"
+              />
+              <div 
+                className="absolute w-7 h-7 rounded-full bg-white shadow-md border border-neutral-200 flex items-center justify-center text-base pointer-events-none transition-all"
+                style={{ left: `calc(${val}% - 14px)`, top: '6px' }}
+              >
+                {sticker.emoji || '😍'}
+              </div>
+            </div>
+          </div>
+        );
+      } else if (sticker.type === 'countdown') {
+        const tick = countdownTicks[sticker.id] || { days: '00', hours: '00', minutes: '00', seconds: '00' };
+        
+        content = (
+          <div className="bg-neutral-900/95 text-white p-3 rounded-2xl w-52 shadow-2xl border border-neutral-800 flex flex-col items-center gap-1 select-none pointer-events-auto">
+            <span className="text-[8px] font-bold text-neutral-400 tracking-wider uppercase text-center line-clamp-1">
+              {sticker.question || 'Contagem Regressiva'}
+            </span>
+            <div className="flex gap-1.5 mt-1">
+              {[tick.days, tick.hours, tick.minutes, tick.seconds].map((val, bIdx) => (
+                <div key={bIdx} className="flex flex-col items-center">
+                  <div className="bg-white/10 rounded-md px-1.5 py-0.5 text-[10px] font-mono font-black tracking-widest text-center text-neutral-100 min-w-[24px]">
+                    {val}
+                  </div>
+                  <span className="text-[5px] text-neutral-500 uppercase font-black mt-0.5">
+                    {['Dias', 'Horas', 'Min', 'Seg'][bIdx]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div
+          key={sticker.id}
+          className="absolute transform -translate-x-1/2 -translate-y-1/2 z-30 transition-transform duration-200 hover:scale-[1.02]"
+          style={{ left: `${sticker.x}%`, top: `${sticker.y}%` }}
+        >
+          {content}
+        </div>
+      );
+    });
+  };
+
   const [isAskingAdjustment, setIsAskingAdjustment] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(true);
@@ -81,6 +311,13 @@ export default function PublicApproval() {
             try { fetchedData.profileIds = typeof fetchedData.profileIds === 'string' ? JSON.parse(fetchedData.profileIds) : fetchedData.profileIds; } catch(e) { fetchedData.profileIds = []; }
          } else {
             fetchedData.profileIds = [];
+         }
+         if (fetchedData.story_stickers) {
+            try { fetchedData.storyStickers = typeof fetchedData.story_stickers === 'string' ? JSON.parse(fetchedData.story_stickers) : fetchedData.story_stickers; } catch(e) { fetchedData.storyStickers = []; }
+         } else if (fetchedData.storyStickers) {
+            try { fetchedData.storyStickers = typeof fetchedData.storyStickers === 'string' ? JSON.parse(fetchedData.storyStickers) : fetchedData.storyStickers; } catch(e) { fetchedData.storyStickers = []; }
+         } else {
+            fetchedData.storyStickers = [];
          }
          setPost(fetchedData);
       }
@@ -283,6 +520,9 @@ export default function PublicApproval() {
           if (isStory) {
             return (
               <div className="w-full max-w-[360px] aspect-[9/16] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24 relative flex flex-col">
+                {/* Figurinhas Interativas */}
+                {renderApprovalStickers(post.storyStickers)}
+                
                 {/* Story Media */}
                 <div className="absolute inset-0 z-0">
                   {(post.fileUrls?.length > 0) || post.fileUrl ? (

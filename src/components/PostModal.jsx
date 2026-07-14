@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   HiX, HiOutlineLink, HiOutlineCurrencyDollar, HiHeart, HiChat, 
@@ -27,6 +27,7 @@ const emptyPost = {
   hasPaidTraffic: false,
   budget: '',
   profileIds: [],
+  storyStickers: [],
 };
 
 const isVideo = (url) => {
@@ -51,18 +52,213 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
   const [currentSlide, setCurrentSlide] = useState(0);
   const [draggedIdx, setDraggedIdx] = useState(null);
 
+  // States para stickers de Story
+  const [isCustomizingStory, setIsCustomizingStory] = useState(false);
+  const [selectedStickerIdx, setSelectedStickerIdx] = useState(null);
+  const [showStickerList, setShowStickerList] = useState(false);
+  const [draggingIdx, setDraggingIdx] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const storyContainerRef = useRef(null);
+
   useEffect(() => {
     if (editingPost) {
       setForm({
          ...editingPost,
          fileUrls: editingPost.fileUrls || (editingPost.fileUrl ? [editingPost.fileUrl] : []),
          profileIds: editingPost.profileIds || [],
+         storyStickers: editingPost.storyStickers || [],
       });
     } else {
-      setForm({ ...emptyPost, date: initialDate || '', profileIds: [] });
+      setForm({ ...emptyPost, date: initialDate || '', profileIds: [], storyStickers: [] });
     }
     setCurrentSlide(0);
+    setIsCustomizingStory(false);
+    setSelectedStickerIdx(null);
+    setShowStickerList(false);
   }, [editingPost, isOpen, initialDate]);
+
+  const addSticker = (type) => {
+    const newSticker = {
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(),
+      type,
+      x: 50,
+      y: 50,
+    };
+    
+    if (type === 'poll') {
+      newSticker.question = 'Faça uma enquete';
+      newSticker.options = ['Sim', 'Não'];
+    } else if (type === 'question') {
+      newSticker.question = 'Faça uma pergunta';
+    } else if (type === 'link') {
+      newSticker.linkText = 'CLIQUE AQUI';
+      newSticker.url = 'https://g3soft.com.br';
+    } else if (type === 'slider') {
+      newSticker.question = 'Gostou?';
+      newSticker.emoji = '😍';
+    } else if (type === 'countdown') {
+      newSticker.question = 'Contagem Regressiva';
+      const target = new Date();
+      target.setDate(target.getDate() + 3);
+      newSticker.targetDate = target.toISOString().substring(0, 16);
+    }
+    
+    setForm(prev => ({
+      ...prev,
+      storyStickers: [...(prev.storyStickers || []), newSticker]
+    }));
+    setSelectedStickerIdx(form.storyStickers?.length || 0);
+    setShowStickerList(false);
+  };
+
+  const removeSticker = (idx) => {
+    setForm(prev => {
+      const stickers = (prev.storyStickers || []).filter((_, i) => i !== idx);
+      return { ...prev, storyStickers: stickers };
+    });
+    setSelectedStickerIdx(null);
+  };
+
+  const updateStickerData = (idx, field, value) => {
+    setForm(prev => {
+      const stickers = [...(prev.storyStickers || [])];
+      stickers[idx] = { ...stickers[idx], [field]: value };
+      return { ...prev, storyStickers: stickers };
+    });
+  };
+
+  const handleStickerDragStart = (e, idx) => {
+    e.stopPropagation();
+    setDraggingIdx(idx);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left - rect.width / 2,
+      y: e.clientY - rect.top - rect.height / 2
+    });
+  };
+
+  const handleStickerDragMove = (e) => {
+    if (draggingIdx === null || !storyContainerRef.current) return;
+    const rect = storyContainerRef.current.getBoundingClientRect();
+    
+    let x = ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100;
+    let y = ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100;
+    
+    x = Math.max(0, Math.min(100, Math.round(x)));
+    y = Math.max(0, Math.min(100, Math.round(y)));
+    
+    setForm(prev => {
+      const stickers = [...(prev.storyStickers || [])];
+      stickers[draggingIdx] = { ...stickers[draggingIdx], x, y };
+      return { ...prev, storyStickers: stickers };
+    });
+  };
+
+  const handleStickerDragEnd = () => {
+    setDraggingIdx(null);
+  };
+
+  const renderStickers = (stickers, interactive = false, onStickerClick = null) => {
+    if (!stickers || stickers.length === 0) return null;
+    return stickers.map((sticker, idx) => {
+      const isSelected = selectedStickerIdx === idx && isCustomizingStory;
+      
+      let content = null;
+      if (sticker.type === 'poll') {
+        content = (
+          <div className="bg-white text-black p-3 rounded-2xl w-44 shadow-xl border border-neutral-100 flex flex-col items-center gap-1.5 select-none pointer-events-auto">
+            <span className="text-[10px] font-black text-center text-neutral-800 line-clamp-2 uppercase tracking-wide">
+              {sticker.question || 'Faça uma enquete'}
+            </span>
+            <div className="w-full space-y-1 mt-1">
+              {(sticker.options || ['Sim', 'Não']).map((opt, oIdx) => (
+                <div 
+                  key={oIdx} 
+                  className="w-full py-1.5 bg-neutral-50 border border-neutral-200 rounded-xl text-[9px] font-bold text-center text-neutral-700 hover:bg-neutral-100 transition-all cursor-pointer"
+                >
+                  {opt || `Opção ${oIdx + 1}`}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      } else if (sticker.type === 'question') {
+        content = (
+          <div className="bg-white rounded-2xl overflow-hidden w-44 shadow-xl border border-neutral-100 flex flex-col select-none pointer-events-auto">
+            <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white text-center py-2 px-3 text-[9px] font-extrabold tracking-wide uppercase">
+              {sticker.question || 'Faça uma pergunta'}
+            </div>
+            <div className="p-2 bg-neutral-50 border-t border-neutral-100 flex flex-col">
+              <div className="w-full bg-white border border-neutral-200 rounded-xl py-2 px-3 text-[8px] text-neutral-400 font-medium">
+                Escreva algo...
+              </div>
+            </div>
+          </div>
+        );
+      } else if (sticker.type === 'link') {
+        content = (
+          <div className="bg-white text-blue-500 px-4 py-2 rounded-full shadow-lg border border-neutral-100 flex items-center justify-center gap-1 font-black text-[10px] tracking-wider select-none pointer-events-auto uppercase">
+            🔗 {sticker.linkText || 'SAIBA MAIS'}
+          </div>
+        );
+      } else if (sticker.type === 'slider') {
+        content = (
+          <div className="bg-white/95 backdrop-blur-md p-2.5 rounded-2xl w-40 shadow-xl border border-neutral-200/50 flex flex-col items-center gap-1 select-none pointer-events-auto">
+            <span className="text-[9px] font-black text-center text-neutral-700 line-clamp-2 uppercase">
+              {sticker.question || 'Gostou?'}
+            </span>
+            <div className="w-full flex items-center justify-center py-2 relative">
+              <div className="w-full h-1.5 bg-neutral-200 rounded-full" />
+              <div className="absolute left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white shadow border border-neutral-200 flex items-center justify-center text-xs">
+                {sticker.emoji || '😍'}
+              </div>
+            </div>
+          </div>
+        );
+      } else if (sticker.type === 'countdown') {
+        content = (
+          <div className="bg-neutral-900/95 text-white p-3 rounded-2xl w-48 shadow-2xl border border-neutral-800 flex flex-col items-center gap-1 select-none pointer-events-auto">
+            <span className="text-[8px] font-bold text-neutral-400 tracking-wider uppercase text-center line-clamp-1">
+              {sticker.question || 'Contagem Regressiva'}
+            </span>
+            <div className="flex gap-1 mt-1">
+              {['00', '00', '00', '00'].map((val, bIdx) => (
+                <div key={bIdx} className="flex flex-col items-center">
+                  <div className="bg-white/10 rounded-md px-1 py-0.5 text-[10px] font-mono font-black tracking-widest text-center text-neutral-100 min-w-[20px]">
+                    {val}
+                  </div>
+                  <span className="text-[5px] text-neutral-500 uppercase font-black mt-0.5">
+                    {['Dias', 'Horas', 'Min', 'Seg'][bIdx]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div
+          key={sticker.id}
+          className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-move z-30 select-none ${
+            isSelected ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-dark-900 rounded-2xl shadow-2xl scale-[1.05]' : 'hover:scale-[1.02]'
+          } transition-transform duration-200`}
+          style={{ left: `${sticker.x}%`, top: `${sticker.y}%` }}
+          onPointerDown={(e) => {
+            if (!isCustomizingStory) return;
+            handleStickerDragStart(e, idx);
+            if (onStickerClick) onStickerClick(idx);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onStickerClick) onStickerClick(idx);
+          }}
+        >
+          {content}
+        </div>
+      );
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -295,7 +491,237 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10">
             {/* === FORM STEPS === */}
-            <div className="space-y-10">
+            {isCustomizingStory ? (
+              <div className="space-y-6 bg-dark-700/20 border border-dark-600/30 p-6 rounded-2xl animate-fade-in text-white h-fit">
+                <div className="flex items-center justify-between border-b border-dark-600/30 pb-4 mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-white">Configurações do Story</h3>
+                    <p className="text-xs text-dark-400 mt-0.5">Personalize os textos e figurinhas interativas</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomizingStory(false)}
+                    className="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    ← Detalhes do Post
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowStickerList(true)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-lg transition-all"
+                  >
+                    <span>➕ Adicionar Figurinha</span>
+                  </button>
+                </div>
+
+                {/* Stickers List / Selected Sticker Config */}
+                <div className="space-y-5">
+                  {(!form.storyStickers || form.storyStickers.length === 0) ? (
+                    <div className="p-8 text-center border border-dashed border-dark-600 rounded-2xl bg-dark-900/20">
+                      <p className="text-xs text-dark-500">Nenhuma figurinha adicionada ainda.</p>
+                      <p className="text-[10px] text-dark-500 mt-1">Abra o menu de figurinhas e adicione elementos ao seu Story!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <label className="block text-xs font-bold text-dark-300 uppercase tracking-wider">Figurinhas no Story</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {form.storyStickers.map((sticker, idx) => (
+                          <button
+                            key={sticker.id}
+                            type="button"
+                            onClick={() => setSelectedStickerIdx(idx)}
+                            className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold text-left transition-all ${
+                              selectedStickerIdx === idx
+                                ? 'bg-brand-500/10 border-brand-500 text-white shadow'
+                                : 'bg-dark-800/40 border-dark-600/50 text-dark-300 hover:bg-dark-800'
+                            }`}
+                          >
+                            <span className="capitalize">{sticker.type} ({Math.round(sticker.x)}%, {Math.round(sticker.y)}%)</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeSticker(idx);
+                              }}
+                              className="text-red-400 hover:text-red-300 px-1 py-0.5 text-[10px] font-bold"
+                            >
+                              Remover
+                            </button>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Selected Sticker Config Inputs */}
+                      {selectedStickerIdx !== null && form.storyStickers[selectedStickerIdx] && (
+                        <div className="bg-dark-800/60 border border-dark-600/40 p-4 rounded-xl space-y-4 mt-6 animate-fade-in">
+                          <div className="flex items-center justify-between border-b border-dark-600/20 pb-2 mb-2">
+                            <span className="text-xs font-bold text-white uppercase tracking-wider">Editar Figurinha: {form.storyStickers[selectedStickerIdx].type}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeSticker(selectedStickerIdx)}
+                              className="text-xs text-red-400 hover:text-red-300 font-bold"
+                            >
+                              Remover do Story
+                            </button>
+                          </div>
+
+                          {/* Poll (Enquete) Config */}
+                          {form.storyStickers[selectedStickerIdx].type === 'poll' && (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Pergunta</label>
+                                <input
+                                  type="text"
+                                  value={form.storyStickers[selectedStickerIdx].question || ''}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'question', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase">Alternativas</label>
+                                {(form.storyStickers[selectedStickerIdx].options || []).map((opt, oIdx) => (
+                                  <div key={oIdx} className="flex gap-2 items-center">
+                                    <input
+                                      type="text"
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const newOpts = [...form.storyStickers[selectedStickerIdx].options];
+                                        newOpts[oIdx] = e.target.value;
+                                        updateStickerData(selectedStickerIdx, 'options', newOpts);
+                                      }}
+                                      className="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500"
+                                      placeholder={`Opção ${oIdx + 1}`}
+                                    />
+                                    {oIdx > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newOpts = form.storyStickers[selectedStickerIdx].options.filter((_, i) => i !== oIdx);
+                                          updateStickerData(selectedStickerIdx, 'options', newOpts);
+                                        }}
+                                        className="text-red-400 hover:text-red-300 text-xs font-bold"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                                {form.storyStickers[selectedStickerIdx].options.length < 4 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newOpts = [...form.storyStickers[selectedStickerIdx].options, ''];
+                                      updateStickerData(selectedStickerIdx, 'options', newOpts);
+                                    }}
+                                    className="text-[10px] font-bold text-brand-400 hover:text-brand-300 mt-1"
+                                  >
+                                    + Adicionar Alternativa
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Questions (Perguntas) Config */}
+                          {form.storyStickers[selectedStickerIdx].type === 'question' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Título/Pergunta</label>
+                              <input
+                                type="text"
+                                value={form.storyStickers[selectedStickerIdx].question || ''}
+                                onChange={(e) => updateStickerData(selectedStickerIdx, 'question', e.target.value)}
+                                className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                              />
+                            </div>
+                          )}
+
+                          {/* Link Config */}
+                          {form.storyStickers[selectedStickerIdx].type === 'link' && (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Texto do Link</label>
+                                <input
+                                  type="text"
+                                  value={form.storyStickers[selectedStickerIdx].linkText || ''}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'linkText', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                                  placeholder="CLIQUE AQUI"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">URL de Destino</label>
+                                <input
+                                  type="text"
+                                  value={form.storyStickers[selectedStickerIdx].url || ''}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'url', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                                  placeholder="https://suamarca.com.br"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Emoji Slider Config */}
+                          {form.storyStickers[selectedStickerIdx].type === 'slider' && (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Pergunta</label>
+                                <input
+                                  type="text"
+                                  value={form.storyStickers[selectedStickerIdx].question || ''}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'question', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Emoji</label>
+                                <select
+                                  value={form.storyStickers[selectedStickerIdx].emoji || '😍'}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'emoji', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-brand-500"
+                                >
+                                  {['😍', '🔥', '😮', '😂', '👏', '💯', '❤️', '👍'].map(em => (
+                                    <option key={em} value={em} className="bg-dark-800">{em}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Countdown (Contagem Regressiva) Config */}
+                          {form.storyStickers[selectedStickerIdx].type === 'countdown' && (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Título</label>
+                                <input
+                                  type="text"
+                                  value={form.storyStickers[selectedStickerIdx].question || ''}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'question', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-dark-300 uppercase mb-1">Data/Hora Alvo</label>
+                                <input
+                                  type="datetime-local"
+                                  value={form.storyStickers[selectedStickerIdx].targetDate || ''}
+                                  onChange={(e) => updateStickerData(selectedStickerIdx, 'targetDate', e.target.value)}
+                                  className="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 text-xs text-white [color-scheme:dark] focus:outline-none focus:border-brand-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-10">
 
               {/* STEP 1 — Identificação */}
               <div className="relative pl-6 border-l-2 border-brand-500/30 hover:border-brand-500/70 transition-colors duration-300">
@@ -658,15 +1084,29 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
               </div>
 
             </div>
+          )}
 
             {/* === PHONE PREVIEW === */}
             <div className="hidden lg:block relative select-none">
               <div className="sticky top-6 w-full">
-                <div className="text-center mb-4 flex items-center justify-center gap-2">
+                <div className="text-center mb-4 flex flex-col items-center justify-center gap-2">
                   <span className="text-xs font-bold text-dark-300 uppercase tracking-widest flex items-center justify-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
                     Preview: {contentType}
                   </span>
+                  {isStory && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomizingStory(p => !p)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        isCustomizingStory 
+                          ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-lg glow-brand animate-pulse-slow'
+                          : 'bg-dark-700 hover:bg-dark-600 border border-dark-600 text-dark-200'
+                      }`}
+                    >
+                      {isCustomizingStory ? '✕ Concluir' : '🎨 Personalizar Story'}
+                    </button>
+                  )}
                 </div>
                 
                 <div className="relative w-full aspect-[9/16] bg-dark-900 rounded-[2.5rem] border-[6px] border-dark-800 shadow-2xl overflow-hidden flex flex-col group/phone hover:border-dark-700 transition-colors duration-500">
@@ -676,11 +1116,17 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                   </div>
 
                   {isStory ? (
-                    <div className="relative flex-1 bg-black">
+                    <div 
+                      ref={storyContainerRef}
+                      className="relative flex-1 bg-black overflow-hidden select-none"
+                      onPointerMove={handleStickerDragMove}
+                      onPointerUp={handleStickerDragEnd}
+                      onPointerLeave={handleStickerDragEnd}
+                    >
                       {isVideo(mediaUrl) ? (
                         <video src={mediaUrl} className="w-full h-full object-cover opacity-90" autoPlay muted loop playsInline />
                       ) : (
-                        <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover opacity-90" />
+                        <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover opacity-90 pointer-events-none" />
                       )}
                       
                       {/* Barrinhas de Progresso Story */}
@@ -702,14 +1148,70 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                         <HiX className="text-white w-5 h-5 drop-shadow-md" />
                       </div>
                       
+                      {/* Stickers Overlay */}
+                      {renderStickers(form.storyStickers, true, (idx) => setSelectedStickerIdx(idx))}
+
+                      {/* Floating Sticker Button (Instagram Style) */}
+                      {isCustomizingStory && (
+                        <div className="absolute top-12 right-3 z-40 flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowStickerList(p => !p)}
+                            className="w-8 h-8 rounded-lg bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/80 transition-colors shadow"
+                            title="Figurinhas"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Sticker List popover */}
+                      {showStickerList && (
+                        <div className="absolute inset-x-0 bottom-0 top-1/4 bg-dark-950/95 backdrop-blur-lg border-t border-dark-600/50 rounded-t-3xl p-4 z-50 flex flex-col animate-slide-up pointer-events-auto">
+                          <div className="flex items-center justify-between border-b border-dark-600/30 pb-2 mb-3">
+                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">Adesivos</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowStickerList(false)}
+                              className="text-dark-400 hover:text-white text-[10px] font-bold"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 overflow-y-auto pr-1 flex-1 no-scrollbar">
+                            {[
+                              { type: 'poll', name: 'Enquete', icon: '📊' },
+                              { type: 'question', name: 'Pergunta', icon: '❓' },
+                              { type: 'link', name: 'Link', icon: '🔗' },
+                              { type: 'slider', name: 'Emoji Slider', icon: '😍' },
+                              { type: 'countdown', name: 'Contagem', icon: '⏰' }
+                            ].map(stickerType => (
+                              <button
+                                key={stickerType.type}
+                                type="button"
+                                onClick={() => addSticker(stickerType.type)}
+                                className="flex flex-col items-center justify-center p-3 bg-dark-800 hover:bg-dark-700 border border-dark-600/40 rounded-2xl transition-all hover:scale-[1.03]"
+                              >
+                                <span className="text-2xl mb-1">{stickerType.icon}</span>
+                                <span className="text-[9px] font-bold text-white uppercase tracking-wider">{stickerType.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Text Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center p-6 z-20 pointer-events-none">
-                        {form.caption && (
-                          <p className="text-white font-bold text-center drop-shadow-lg text-sm leading-snug bg-black/40 p-3 rounded-xl backdrop-blur-sm">
-                            {form.caption.replace(/<[^>]*>?/gm, '')}
-                          </p>
-                        )}
-                      </div>
+                      {!isCustomizingStory && (
+                        <div className="absolute inset-0 flex items-center justify-center p-6 z-20 pointer-events-none">
+                          {form.caption && (
+                            <p className="text-white font-bold text-center drop-shadow-lg text-sm leading-snug bg-black/40 p-3 rounded-xl backdrop-blur-sm">
+                              {form.caption.replace(/<[^>]*>?/gm, '')}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Footer Story */}
                       <div className="absolute bottom-0 w-full p-4 flex gap-3 items-center z-30 bg-gradient-to-t from-black/80 to-transparent">
@@ -721,7 +1223,7 @@ export default function PostModal({ isOpen, onClose, onSave, editingPost, initia
                       </div>
                       
                       {/* Nav Story */}
-                      {fileUrls.length > 1 && (
+                      {!isCustomizingStory && fileUrls.length > 1 && (
                         <>
                           <button type="button" onClick={prevSlide} className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-2/3 z-40 bg-transparent" />
                           <button type="button" onClick={nextSlide} className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-2/3 z-40 bg-transparent" />

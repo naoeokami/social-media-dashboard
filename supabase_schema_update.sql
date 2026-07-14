@@ -61,3 +61,5 @@ INSERT INTO ai_models (provider, name, value) VALUES
 ('openrouter', 'meta-llama/llama-3-8b-instruct:free', 'meta-llama/llama-3-8b-instruct:free')
 ON CONFLICT (value) DO NOTHING;
 
+-- 6. Adicionar a coluna story_stickers na tabela posts
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS story_stickers TEXT;

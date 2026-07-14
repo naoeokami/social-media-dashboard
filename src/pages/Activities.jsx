@@ -46,6 +46,54 @@ const CATEGORIES = [
   { value: 'Outros', label: 'Outros', color: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
 ];
 
+// Sanitiza o horário enquanto o usuário digita. Aceita "15:30", "1530", "9:5" etc.
+// Não formata automaticamente zeros à esquerda durante a digitação, para que o usuário
+// consiga digitar "15:30" sem a máscara "puxar" o 30 para HH. A normalização final
+// (zero à esquerda + validação 00-23/00-59) acontece no blur/Enter.
+const sanitizeTimeInput = (raw) => {
+  if (!raw) return '';
+  // Remove qualquer não-dígito
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) {
+    // Ainda digitando horas — só devolve os dígitos, sem impor "HH:"
+    return digits;
+  }
+  // Já tem minutos: insere o ":" entre as 2 primeiras casas e o restante
+  const hh = digits.slice(0, 2);
+  const mm = digits.slice(2);
+  return `${hh}:${mm}`;
+};
+
+// Normaliza para o formato canônico HH:mm (com validação 24h).
+// Usado no blur/Enter, quando o usuário terminou de digitar.
+const normalizeTime24h = (raw) => {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '').slice(0, 4);
+  if (digits.length === 0) return '';
+  let hh = digits.slice(0, 2);
+  let mm = digits.slice(2, 4);
+
+  let h = parseInt(hh, 10);
+  if (Number.isNaN(h)) h = 0;
+  if (h > 23) h = 23;
+  hh = h.toString().padStart(2, '0');
+
+  if (mm.length === 0) {
+    mm = '00';
+  } else if (mm.length === 1) {
+    const m = parseInt(mm, 10);
+    mm = (!Number.isNaN(m) && m <= 59 ? m : 0).toString().padStart(2, '0');
+  } else {
+    let m = parseInt(mm, 10);
+    if (Number.isNaN(m)) m = 0;
+    if (m > 59) m = 59;
+    mm = m.toString().padStart(2, '0');
+  }
+
+  return `${hh}:${mm}`;
+};
+
 export default function Activities() {
   const { activities, addActivity, updateActivity, deleteActivity } = useApp();
   
@@ -301,8 +349,17 @@ export default function Activities() {
                       <input
                         type="text"
                         value={time}
-                        onChange={e => setTime(e.target.value)}
-                        placeholder="Ex: 14:00 ou Manhã"
+                        onChange={e => setTime(sanitizeTimeInput(e.target.value))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            setTime(normalizeTime24h(e.currentTarget.value));
+                          }
+                        }}
+                        onBlur={e => setTime(normalizeTime24h(e.target.value))}
+                        placeholder="Ex: 14:00"
+                        inputMode="numeric"
+                        maxLength="5"
                         className="w-full px-4 py-2.5 bg-dark-700/50 border border-dark-600/50 rounded-xl text-white placeholder-dark-400 focus:outline-none focus:border-brand-500/50 transition-all text-sm"
                       />
                     </div>

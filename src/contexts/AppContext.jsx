@@ -160,6 +160,21 @@ export function AppProvider({ children }) {
              } else {
                p.profileIds = [];
              }
+             if (p.story_stickers) {
+               try {
+                 p.storyStickers = typeof p.story_stickers === 'string' ? JSON.parse(p.story_stickers) : p.story_stickers;
+               } catch(e) {
+                 p.storyStickers = [];
+               }
+             } else if (p.storyStickers) {
+               try {
+                 p.storyStickers = typeof p.storyStickers === 'string' ? JSON.parse(p.storyStickers) : p.storyStickers;
+               } catch(e) {
+                 p.storyStickers = [];
+               }
+             } else {
+               p.storyStickers = [];
+             }
              return p;
            });
            setPosts(parsedPosts);
@@ -358,6 +373,14 @@ export function AppProvider({ children }) {
                 newPost.profileIds = [];
              }
 
+             if (newPost.story_stickers) {
+                try { newPost.storyStickers = typeof newPost.story_stickers === 'string' ? JSON.parse(newPost.story_stickers) : newPost.story_stickers; } catch(e) { newPost.storyStickers = []; }
+             } else if (newPost.storyStickers) {
+                try { newPost.storyStickers = typeof newPost.storyStickers === 'string' ? JSON.parse(newPost.storyStickers) : newPost.storyStickers; } catch(e) { newPost.storyStickers = []; }
+             } else {
+                newPost.storyStickers = [];
+             }
+
              setPosts(prev => {
                 const oldPost = prev.find(p => p.id === newPost.id);
                 
@@ -391,6 +414,14 @@ export function AppProvider({ children }) {
                  try { newPost.profileIds = typeof newPost.profileIds === 'string' ? JSON.parse(newPost.profileIds) : newPost.profileIds; } catch(e) { newPost.profileIds = []; }
               } else {
                  newPost.profileIds = [];
+              }
+
+              if (newPost.story_stickers) {
+                 try { newPost.storyStickers = typeof newPost.story_stickers === 'string' ? JSON.parse(newPost.story_stickers) : newPost.story_stickers; } catch(e) { newPost.storyStickers = []; }
+              } else if (newPost.storyStickers) {
+                 try { newPost.storyStickers = typeof newPost.storyStickers === 'string' ? JSON.parse(newPost.storyStickers) : newPost.storyStickers; } catch(e) { newPost.storyStickers = []; }
+              } else {
+                 newPost.storyStickers = [];
               }
 
               setPosts(prev => {
@@ -509,12 +540,19 @@ export function AppProvider({ children }) {
          delete dbPost.profileIds;
       }
 
+      if (dbPost.storyStickers !== undefined) {
+         dbPost.story_stickers = JSON.stringify(dbPost.storyStickers);
+         delete dbPost.storyStickers;
+      }
+
       let { error } = await supabase.from('posts').insert(dbPost);
       if (error) {
-        console.warn('Supabase AddPost Error (retrying without profileIds columns):', error);
+        console.warn('Supabase AddPost Error (retrying without profileIds/story_stickers columns):', error);
         const fallbackPost = { ...dbPost };
         delete fallbackPost.profile_ids;
         delete fallbackPost.profileIds;
+        delete fallbackPost.story_stickers;
+        delete fallbackPost.storyStickers;
         const retry = await supabase.from('posts').insert(fallbackPost);
         if (retry.error) {
           console.error('Supabase AddPost Retry Error:', retry.error);
@@ -552,12 +590,19 @@ export function AppProvider({ children }) {
          delete dbPost.profileIds;
       }
 
+      if (dbPost.storyStickers !== undefined) {
+         dbPost.story_stickers = JSON.stringify(dbPost.storyStickers);
+         delete dbPost.storyStickers;
+      }
+
       let { error } = await supabase.from('posts').update(dbPost).eq('id', id);
       if (error) {
-        console.warn('Supabase UpdatePost Error (retrying without profileIds columns):', error);
+        console.warn('Supabase UpdatePost Error (retrying without profileIds/story_stickers columns):', error);
         const fallbackPost = { ...dbPost };
         delete fallbackPost.profile_ids;
         delete fallbackPost.profileIds;
+        delete fallbackPost.story_stickers;
+        delete fallbackPost.storyStickers;
         const retry = await supabase.from('posts').update(fallbackPost).eq('id', id);
         if (retry.error) {
           console.error('Supabase UpdatePost Retry Error:', retry.error);
