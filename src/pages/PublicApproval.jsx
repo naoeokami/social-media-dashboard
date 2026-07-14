@@ -4,12 +4,12 @@ import { getItemById, updateItem } from '../services/storageService';
 import { supabase, hasSupabaseConfig } from '../lib/supabase';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  HiOutlineCheck, 
-  HiOutlineRefresh, 
-  HiOutlineDocumentText, 
-  HiOutlineCalendar, 
-  HiOutlineLink, 
+import {
+  HiOutlineCheck,
+  HiOutlineRefresh,
+  HiOutlineDocumentText,
+  HiOutlineCalendar,
+  HiOutlineLink,
   HiOutlineHeart,
   HiOutlineChat,
   HiOutlinePaperAirplane,
@@ -54,7 +54,7 @@ export default function PublicApproval() {
             const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            
+
             const formatNum = (n) => String(n).padStart(2, '0');
             newTicks[sticker.id] = {
               days: formatNum(days),
@@ -80,7 +80,7 @@ export default function PublicApproval() {
       if (sticker.type === 'poll') {
         const votedIdx = pollVotes[sticker.id];
         const hasVoted = votedIdx !== undefined;
-        
+
         const mockPercentages = [];
         if (hasVoted) {
           const optsCount = sticker.options?.length || 2;
@@ -114,10 +114,10 @@ export default function PublicApproval() {
               {(sticker.options || ['Sim', 'Não']).map((opt, oIdx) => {
                 const isSelected = votedIdx === oIdx;
                 const pct = hasVoted ? mockPercentages[oIdx] : 0;
-                
+
                 return (
-                  <button 
-                    key={oIdx} 
+                  <button
+                    key={oIdx}
                     type="button"
                     onClick={() => {
                       if (!hasVoted) {
@@ -128,16 +128,16 @@ export default function PublicApproval() {
                     style={{ backgroundColor: isSelected ? '#ea580c10' : '#f5f5f5', borderColor: isSelected ? '#ea580c50' : '#e5e5e5' }}
                   >
                     {hasVoted && (
-                      <div 
-                        className="absolute left-0 top-0 bottom-0 bg-neutral-200/80 transition-all duration-700 ease-out" 
+                      <div
+                        className="absolute left-0 top-0 bottom-0 bg-neutral-200/80 transition-all duration-700 ease-out"
                         style={{ width: `${pct}%`, backgroundColor: isSelected ? '#ea580c25' : '#e5e5e5' }}
                       />
                     )}
-                    
+
                     <span className="relative z-10 text-neutral-700 px-2 truncate">
                       {opt || `Opção ${oIdx + 1}`}
                     </span>
-                    
+
                     {hasVoted && (
                       <span className="absolute right-3.5 z-10 text-[10px] font-black text-neutral-800">
                         {pct}%
@@ -202,7 +202,7 @@ export default function PublicApproval() {
         );
       } else if (sticker.type === 'slider') {
         const val = sliderValues[sticker.id] || 50;
-        
+
         content = (
           <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl w-48 shadow-2xl border border-neutral-200/50 flex flex-col items-center gap-1.5 select-none pointer-events-auto">
             <span className="text-[10px] font-black text-center text-neutral-700 line-clamp-2 uppercase">
@@ -220,7 +220,7 @@ export default function PublicApproval() {
                 }}
                 className="w-full accent-brand-500 bg-neutral-200 h-1.5 rounded-lg appearance-none cursor-pointer"
               />
-              <div 
+              <div
                 className="absolute w-7 h-7 rounded-full bg-white shadow-md border border-neutral-200 flex items-center justify-center text-base pointer-events-none transition-all"
                 style={{ left: `calc(${val}% - 14px)`, top: '6px' }}
               >
@@ -231,7 +231,7 @@ export default function PublicApproval() {
         );
       } else if (sticker.type === 'countdown') {
         const tick = countdownTicks[sticker.id] || { days: '00', hours: '00', minutes: '00', seconds: '00' };
-        
+
         content = (
           <div className="bg-neutral-900/95 text-white p-3 rounded-2xl w-52 shadow-2xl border border-neutral-800 flex flex-col items-center gap-1 select-none pointer-events-auto">
             <span className="text-[8px] font-bold text-neutral-400 tracking-wider uppercase text-center line-clamp-1">
@@ -274,7 +274,7 @@ export default function PublicApproval() {
     async function loadPost() {
       let fetchedData = null;
       let fetchedProfiles = [];
-      
+
       if (hasSupabaseConfig) {
         try {
           const { data } = await supabase.from('social_profiles').select('*');
@@ -282,9 +282,9 @@ export default function PublicApproval() {
             ...p,
             avatarUrl: p.avatar_url || p.avatarUrl
           }));
-        } catch(e) {}
+        } catch (e) { }
       }
-      
+
       if (fetchedProfiles.length === 0) {
         fetchedProfiles = JSON.parse(localStorage.getItem('socialhub_social_profiles') || '[]');
       }
@@ -299,27 +299,27 @@ export default function PublicApproval() {
       }
 
       if (fetchedData) {
-         if (fetchedData.fileUrl && fetchedData.fileUrl.startsWith('[')) {
-            try { fetchedData.fileUrls = JSON.parse(fetchedData.fileUrl); } catch(e) {}
-         }
-         if (!fetchedData.fileUrls && fetchedData.fileUrl) {
-            fetchedData.fileUrls = [fetchedData.fileUrl];
-         }
-         if (fetchedData.profile_ids) {
-            try { fetchedData.profileIds = typeof fetchedData.profile_ids === 'string' ? JSON.parse(fetchedData.profile_ids) : fetchedData.profile_ids; } catch(e) { fetchedData.profileIds = []; }
-         } else if (fetchedData.profileIds) {
-            try { fetchedData.profileIds = typeof fetchedData.profileIds === 'string' ? JSON.parse(fetchedData.profileIds) : fetchedData.profileIds; } catch(e) { fetchedData.profileIds = []; }
-         } else {
-            fetchedData.profileIds = [];
-         }
-         if (fetchedData.story_stickers) {
-            try { fetchedData.storyStickers = typeof fetchedData.story_stickers === 'string' ? JSON.parse(fetchedData.story_stickers) : fetchedData.story_stickers; } catch(e) { fetchedData.storyStickers = []; }
-         } else if (fetchedData.storyStickers) {
-            try { fetchedData.storyStickers = typeof fetchedData.storyStickers === 'string' ? JSON.parse(fetchedData.storyStickers) : fetchedData.storyStickers; } catch(e) { fetchedData.storyStickers = []; }
-         } else {
-            fetchedData.storyStickers = [];
-         }
-         setPost(fetchedData);
+        if (fetchedData.fileUrl && fetchedData.fileUrl.startsWith('[')) {
+          try { fetchedData.fileUrls = JSON.parse(fetchedData.fileUrl); } catch (e) { }
+        }
+        if (!fetchedData.fileUrls && fetchedData.fileUrl) {
+          fetchedData.fileUrls = [fetchedData.fileUrl];
+        }
+        if (fetchedData.profile_ids) {
+          try { fetchedData.profileIds = typeof fetchedData.profile_ids === 'string' ? JSON.parse(fetchedData.profile_ids) : fetchedData.profile_ids; } catch (e) { fetchedData.profileIds = []; }
+        } else if (fetchedData.profileIds) {
+          try { fetchedData.profileIds = typeof fetchedData.profileIds === 'string' ? JSON.parse(fetchedData.profileIds) : fetchedData.profileIds; } catch (e) { fetchedData.profileIds = []; }
+        } else {
+          fetchedData.profileIds = [];
+        }
+        if (fetchedData.story_stickers) {
+          try { fetchedData.storyStickers = typeof fetchedData.story_stickers === 'string' ? JSON.parse(fetchedData.story_stickers) : fetchedData.story_stickers; } catch (e) { fetchedData.storyStickers = []; }
+        } else if (fetchedData.storyStickers) {
+          try { fetchedData.storyStickers = typeof fetchedData.storyStickers === 'string' ? JSON.parse(fetchedData.storyStickers) : fetchedData.storyStickers; } catch (e) { fetchedData.storyStickers = []; }
+        } else {
+          fetchedData.storyStickers = [];
+        }
+        setPost(fetchedData);
       }
       setLoading(false);
     }
@@ -338,7 +338,7 @@ export default function PublicApproval() {
     } else {
       updateItem('posts', id, updateData);
     }
-    
+
     setStatus(actionStatus);
   };
 
@@ -369,7 +369,7 @@ export default function PublicApproval() {
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Avaliação Concluída</h2>
           <p className="text-dark-400 text-sm">
-            Obrigado! O post agora está marcado como: <br/> 
+            Obrigado! O post agora está marcado como: <br />
             <strong className="text-white capitalize">{status || post.status}</strong>
           </p>
         </div>
@@ -384,7 +384,7 @@ export default function PublicApproval() {
     const isW8 = sizeClass.includes("w-8");
     const isW7 = sizeClass.includes("w-7");
     const itemSize = isW8 ? "w-6 h-6" : isW7 ? "w-5 h-5" : "w-7 h-7";
-    
+
     if (selected.length <= 1) {
       const p = selected.length === 1 ? selected[0] : { name: 'G3', avatarUrl: '' };
       return (
@@ -401,7 +401,7 @@ export default function PublicApproval() {
         </div>
       );
     }
-    
+
     const p1 = selected[0];
     const p2 = selected[1];
     return (
@@ -473,25 +473,25 @@ export default function PublicApproval() {
           {/* Section: Agendamento */}
           <div>
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Agendamento</h3>
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 space-y-4">
+            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400">
+                <div className="w-10 h-10 rounded-xl bg-white border border-slate-400 flex items-center justify-center text-slate-400">
                   <HiOutlineCalendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">
+                  <div className="text-sm font-bold text-slate-900">
                     {post.date ? format(parseISO(post.date), "dd/MM", { locale: ptBR }) : '--/--'}
                   </div>
                   <div className="text-xs text-slate-400">{post.time || '00:00'} (GMT-3)</div>
                 </div>
               </div>
-              
-              <div className="flex gap-2">
+
+              <div className="flex gap-2 ">
                 {post.platforms?.map(platform => {
                   const Icon = platformIcons[platform];
                   return (
-                    <div 
-                      key={platform} 
+                    <div
+                      key={platform}
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white"
                       style={{ backgroundColor: platformColors[platform] }}
                     >
@@ -504,8 +504,8 @@ export default function PublicApproval() {
           </div>
 
           <div>
-             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Título do Post</h3>
-             <p className="text-sm text-slate-300 font-medium">{post.title}</p>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Título do Post</h3>
+            <p className="text-sm text-slate-300 font-medium">{post.title}</p>
           </div>
         </div>
       </aside>
@@ -516,13 +516,13 @@ export default function PublicApproval() {
         {(() => {
           const isStory = post.contentType === 'Story';
           const isReels = post.contentType === 'Reels';
-          
+
           if (isStory) {
             return (
               <div className="w-full max-w-[360px] aspect-[9/16] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24 relative flex flex-col">
                 {/* Figurinhas Interativas */}
                 {renderApprovalStickers(post.storyStickers)}
-                
+
                 {/* Story Media */}
                 <div className="absolute inset-0 z-0">
                   {(post.fileUrls?.length > 0) || post.fileUrl ? (
@@ -534,16 +534,16 @@ export default function PublicApproval() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Story Top/Bottom Gradient Overlay */}
                 <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/60 to-transparent z-[5] pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/60 to-transparent z-[5] pointer-events-none"></div>
-                
+
                 {/* Story Top Overlay */}
                 <div className="absolute top-0 left-0 w-full p-4 z-10 flex items-center gap-3">
                   <div className="flex-1 flex gap-1 mb-2 absolute top-2 left-4 right-4">
                     <div className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
-                       <div className="h-full bg-white w-full rounded-full"></div>
+                      <div className="h-full bg-white w-full rounded-full"></div>
                     </div>
                   </div>
                   {renderHeaderAvatar("w-8 h-8")}
@@ -588,7 +588,7 @@ export default function PublicApproval() {
 
                 {/* Reels Header Overlay */}
                 <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-10">
-                   <span className="text-white font-bold text-lg drop-shadow-md">Reels</span>
+                  <span className="text-white font-bold text-lg drop-shadow-md">Reels</span>
                 </div>
 
                 {/* Reels Right Actions */}
@@ -604,7 +604,7 @@ export default function PublicApproval() {
                   <HiOutlinePaperAirplane className="w-7 h-7 text-white drop-shadow-md hover:text-slate-300 transition-colors cursor-pointer rotate-90" />
                   <FaEllipsisH className="w-5 h-5 text-white drop-shadow-md mt-2 cursor-pointer hover:text-slate-300 transition-colors" />
                   <div className="w-8 h-8 rounded-md border-2 border-white overflow-hidden mt-4 flex items-center justify-center bg-slate-800 shadow-md">
-                     <span className="text-[8px] font-bold text-white">AUDIO</span>
+                    <span className="text-[8px] font-bold text-white">AUDIO</span>
                   </div>
                 </div>
 
@@ -629,38 +629,38 @@ export default function PublicApproval() {
 
           // Default Feed Layout
           return (
-            <div className="w-full max-w-[500px] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24">
+            <div className="w-full max-w-[500px] bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xl animate-slide-up mb-24">
               {/* Post Header */}
-              <div className="p-4 flex items-center justify-between border-b border-slate-800/50">
+              <div className="p-4 flex items-center justify-between border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   {renderHeaderAvatar("w-10 h-10")}
                   <div>
                     <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-white">{previewName}</span>
+                      <span className="text-sm font-bold text-slate-900">{previewName}</span>
                       <HiBadgeCheck className="w-4 h-4 text-blue-500" />
                     </div>
                     <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Publicidade</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                   <div className="flex gap-1.5">
-                      {post.platforms?.map(platform => {
-                        const Icon = platformIcons[platform];
-                        return Icon ? (
-                          <Icon key={platform} className="w-4 h-4 opacity-40 hover:opacity-100 transition-opacity" style={{ color: platformColors[platform] }} />
-                        ) : null;
-                      })}
-                   </div>
-                   <FaEllipsisH className="text-slate-600 w-4 h-4 cursor-pointer" />
+                  <div className="flex gap-1.5">
+                    {post.platforms?.map(platform => {
+                      const Icon = platformIcons[platform];
+                      return Icon ? (
+                        <Icon key={platform} className="w-4 h-4 opacity-40 hover:opacity-100 transition-opacity" style={{ color: platformColors[platform] }} />
+                      ) : null;
+                    })}
+                  </div>
+                  <FaEllipsisH className="text-slate-400 w-4 h-4 cursor-pointer" />
                 </div>
               </div>
 
               {/* Post Media */}
-              <div className="aspect-[4/5] w-full bg-dark-900 relative">
+              <div className="aspect-[4/5] w-full bg-slate-50 relative">
                 {(post.fileUrls?.length > 0) || post.fileUrl ? (
                   <ImageCarousel images={post.fileUrls?.length > 0 ? post.fileUrls : [post.fileUrl]} />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-3">
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-3">
                     <HiOutlineDocumentText className="w-16 h-16 opacity-20" />
                     <span className="text-xs font-medium uppercase tracking-widest opacity-40">Sem Mídia</span>
                   </div>
@@ -671,17 +671,17 @@ export default function PublicApproval() {
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <HiOutlineHeart className="w-7 h-7 text-slate-300 hover:text-red-500 transition-colors cursor-pointer" />
-                    <HiOutlineChat className="w-[1.65rem] h-[1.65rem] text-slate-300 hover:text-slate-100 transition-colors cursor-pointer" />
-                    <HiOutlinePaperAirplane className="w-6 h-6 text-slate-300 hover:text-slate-100 transition-colors cursor-pointer rotate-90" />
+                    <HiOutlineHeart className="w-7 h-7 text-slate-600 hover:text-red-500 transition-colors cursor-pointer" />
+                    <HiOutlineChat className="w-[1.65rem] h-[1.65rem] text-slate-600 hover:text-slate-900 transition-colors cursor-pointer" />
+                    <HiOutlinePaperAirplane className="w-6 h-6 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer rotate-90" />
                   </div>
-                  <HiOutlineBookmark className="w-6 h-6 text-slate-300 hover:text-slate-100 transition-colors cursor-pointer" />
+                  <HiOutlineBookmark className="w-6 h-6 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer" />
                 </div>
 
                 {/* Post Caption */}
                 <div className="space-y-2">
-                  <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    <span className="font-bold text-white mr-2">{previewName}</span>
+                  <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    <span className="font-bold text-slate-900 mr-2">{previewName}</span>
                     {post.caption}
                   </div>
                 </div>
@@ -693,8 +693,8 @@ export default function PublicApproval() {
         {/* Floating Actions */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 lg:left-[calc(50%+160px)] flex items-center gap-4 z-30">
           {isAskingAdjustment ? (
-            <div className="bg-slate-900 border border-slate-700 p-4 rounded-3xl shadow-2xl animate-slide-up w-[90vw] max-w-md">
-              <h4 className="text-sm font-bold text-white mb-3">Solicitar Ajustes</h4>
+            <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-2xl animate-slide-up w-[90vw] max-w-md">
+              <h4 className="text-sm font-bold text-slate-900 mb-3">Solicitar Ajustes</h4>
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
@@ -703,13 +703,13 @@ export default function PublicApproval() {
                 className="w-full bg-slate-800 border border-slate-700 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-warning/50 mb-4 resize-y min-h-[80px]"
               />
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setIsAskingAdjustment(false)}
                   className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   onClick={() => handleAction('producao')}
                   disabled={!feedback.trim()}
                   className="flex-1 py-3 px-4 bg-warning hover:bg-warning/90 text-dark-900 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
@@ -719,17 +719,17 @@ export default function PublicApproval() {
               </div>
             </div>
           ) : (
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-full shadow-2xl flex items-center gap-2">
+            <div className="bg-white backdrop-blur-xl border border-slate-200 p-2 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-2">
               <button
                 onClick={() => setIsAskingAdjustment(true)}
-                className="flex items-center gap-2 pl-6 pr-4 py-3 bg-white/5 hover:bg-white/10 rounded-full text-white text-xs font-bold transition-all border border-transparent hover:border-warning/30 group"
+                className="flex items-center gap-2 pl-6 pr-4 py-3 hover:bg-orange-50 rounded-full text-slate-700 hover:text-warning text-xs font-bold transition-all border border-transparent group"
               >
                 <HiOutlineRefresh className="w-4 h-4 text-warning group-hover:rotate-180 transition-transform duration-500" />
                 SOLICITAR AJUSTES
               </button>
               <button
                 onClick={() => handleAction('agendado')}
-                className="flex items-center gap-2 pl-4 pr-6 py-3 bg-success hover:bg-success/90 rounded-full text-dark-900 text-xs font-black transition-all shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                className="flex items-center gap-2 pl-4 pr-6 py-3 bg-success hover:bg-success/90 rounded-full text-white text-xs font-black transition-all shadow-[0_0_20px_rgba(16,185,129,0.4)]"
               >
                 <HiOutlineCheck className="w-5 h-5" />
                 APROVAR AGORA
