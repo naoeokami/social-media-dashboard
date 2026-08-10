@@ -17,7 +17,6 @@ import Comandas from './pages/Comandas';
 import ResetPassword from './pages/ResetPassword';
 import IdeaPreview from './pages/IdeaPreview';
 import Activities from './pages/Activities';
-import G3News from './pages/G3News';
 import { useApp } from './contexts/AppContext';
 import PostStatusModal from './components/PostStatusModal';
 
@@ -60,7 +59,6 @@ export default function App() {
             <Route path="/atividades" element={<Activities />} />
             <Route path="/produtos" element={<Products />} />
             <Route path="/comandas" element={<Comandas />} />
-            <Route path="/g3news" element={<G3News />} />
             <Route path="/agente" element={<AgentChat />} />
             <Route path="/criador-post" element={<PostCreator />} />
           </Route>
