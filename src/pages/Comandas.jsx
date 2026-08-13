@@ -192,10 +192,28 @@ export default function Comandas({ minimal = false }) {
     const currentTemplate = isVerso ? versoTemplate : template;
     const currentCodeType = isVerso ? versoCodeType : codeType;
     
-    // Position/sizing settings
+    const hasQR = currentCodeType === 'qr' || currentCodeType === 'both';
+    const hasBarcode = currentCodeType === 'barcode' || currentCodeType === 'both';
+
+    // Position/sizing settings for QR
     const qrSize = isVerso ? currentSettings.versoQrSize : currentSettings.qrSize;
     const qrX = isVerso ? currentSettings.versoQrX : currentSettings.qrX;
     const qrY = isVerso ? currentSettings.versoQrY : currentSettings.qrY;
+
+    // Position/sizing settings for Barcode
+    const barcodeWidth = isVerso 
+      ? (currentSettings.versoBarcodeWidth ?? currentSettings.versoQrSize) 
+      : (currentSettings.barcodeWidth ?? currentSettings.qrSize);
+    const barcodeHeight = isVerso 
+      ? (currentSettings.versoBarcodeHeight ?? 40) 
+      : (currentSettings.barcodeHeight ?? 40);
+    const barcodeX = isVerso 
+      ? (currentSettings.versoBarcodeX ?? currentSettings.versoQrX) 
+      : (currentSettings.barcodeX ?? currentSettings.qrX);
+    const barcodeY = isVerso 
+      ? (currentSettings.versoBarcodeY ?? (currentCodeType === 'both' ? 65 : currentSettings.qrY)) 
+      : (currentSettings.barcodeY ?? (currentCodeType === 'both' ? 65 : currentSettings.qrY));
+
     const textX = isVerso ? currentSettings.versoTextX : currentSettings.textX;
     const textY = isVerso ? currentSettings.versoTextY : currentSettings.textY;
     const fontSize = isVerso ? currentSettings.versoFontSize : currentSettings.fontSize;
@@ -207,7 +225,6 @@ export default function Comandas({ minimal = false }) {
     const boxRadius = isVerso ? currentSettings.versoBoxRadius : currentSettings.boxRadius;
 
     // Calculation in absolute pixels
-    const qrPx = (qrSize / 100) * canvasWidth;
     const fontPx = (fontSize / 100) * canvasHeight;
     const boxWPx = (boxWidth / 100) * canvasWidth;
     const boxHPx = (boxHeight / 100) * canvasHeight;
@@ -251,12 +268,13 @@ export default function Comandas({ minimal = false }) {
       ctx.fill();
     }
 
-    // 3. Draw QR Code or Barcode
-    const content = currentCodeType === 'barcode' ? itemData?.controle : (dataSource === 'link' ? itemData?.link : itemData?.controle);
-    if (itemData && content && currentCodeType !== 'none') {
-      try {
-        if (currentCodeType === 'qr') {
-          const qrDataUrl = await QRCode.toDataURL(content, {
+    // 3A. Draw QR Code if hasQR
+    if (itemData && hasQR) {
+      const qrContent = dataSource === 'link' ? (itemData.link || itemData.controle) : itemData.controle;
+      if (qrContent) {
+        try {
+          const qrPx = (qrSize / 100) * canvasWidth;
+          const qrDataUrl = await QRCode.toDataURL(qrContent, {
             width: Math.round(qrPx),
             margin: 0,
             errorCorrectionLevel: 'H'
@@ -272,19 +290,25 @@ export default function Comandas({ minimal = false }) {
               resolve();
             };
           });
-        } else {
-          // CODE128 Barcode
-          const barcodeCanvas = document.createElement('canvas');
-          const bWidth = qrPx;
-          const currentBarcodeHeight = isVerso ? (currentSettings.versoBarcodeHeight ?? 40) : (currentSettings.barcodeHeight ?? 40);
-          const bHeight = qrPx * (currentBarcodeHeight / 100);
+        } catch (err) {
+          console.error("Erro ao gerar QR Code:", err);
+        }
+      }
+    }
 
-          // Estimate number of modules in CODE128 (approx 11 per char + 35 for start/stop/check, quiet zone is 0 as margin: 0)
-          const estimatedModules = (content.length * 11) + 35;
-          // Determine single bar width dynamically so the generated barcode matches target resolution
+    // 3B. Draw Barcode if hasBarcode
+    if (itemData && hasBarcode) {
+      const barcodeContent = itemData.controle || itemData.numero;
+      if (barcodeContent) {
+        try {
+          const bWidth = (barcodeWidth / 100) * canvasWidth;
+          const bHeight = bWidth * (barcodeHeight / 100);
+
+          const barcodeCanvas = document.createElement('canvas');
+          const estimatedModules = (String(barcodeContent).length * 11) + 35;
           const optWidth = Math.max(2, Math.floor(bWidth / estimatedModules));
 
-          JsBarcode(barcodeCanvas, content, {
+          JsBarcode(barcodeCanvas, String(barcodeContent), {
             format: "CODE128",
             width: optWidth,
             height: Math.round(bHeight),
@@ -298,24 +322,23 @@ export default function Comandas({ minimal = false }) {
           barcodeImg.src = barcodeDataUrl;
           await new Promise((resolve) => {
             barcodeImg.onload = () => {
-              const qrXPx = (qrX / 100) * canvasWidth - (qrPx / 2);
-              const qrYPx = (qrY / 100) * canvasHeight - (bHeight / 2);
+              const bXPx = (barcodeX / 100) * canvasWidth - (bWidth / 2);
+              const bYPx = (barcodeY / 100) * canvasHeight - (bHeight / 2);
 
               const actualW = barcodeImg.width;
-              // Draw the barcode image at its native width (centered) and height to avoid any scaling artifacts
               const drawW = actualW <= bWidth ? actualW : bWidth;
-              const centeredXPx = qrXPx + (bWidth - drawW) / 2;
+              const centeredXPx = bXPx + (bWidth - drawW) / 2;
               
               const prevSmoothing = ctx.imageSmoothingEnabled;
               ctx.imageSmoothingEnabled = false;
-              ctx.drawImage(barcodeImg, centeredXPx, qrYPx, drawW, bHeight);
+              ctx.drawImage(barcodeImg, centeredXPx, bYPx, drawW, bHeight);
               ctx.imageSmoothingEnabled = prevSmoothing;
               resolve();
             };
           });
+        } catch (err) {
+          console.error("Erro ao gerar Código de Barras:", err);
         }
-      } catch (err) {
-        console.error("Erro ao gerar Código:", err);
       }
     }
 
@@ -558,34 +581,129 @@ export default function Comandas({ minimal = false }) {
   };
 
   const handleAutoCenter = () => {
-    // Calcula a altura real do código em relação à altura total do cartão (%)
     const cardW = pageWidth;
     const cardH = pageHeight;
     
-    const codeH_in_cm = codeType === 'qr' 
-      ? (settings.qrSize/100 * cardW) 
-      : (settings.qrSize/100 * cardW * (settings.barcodeHeight / 100));
-    const codeH_pct = (codeH_in_cm / cardH) * 100;
-    
-    // Altura do texto (%)
-    const textH_pct = settings.fontSize;
-    
-    // Espaçamento entre os elementos (8% da altura do cartão)
-    const gap_pct = 8;
-    
-    // Altura total do bloco (Código + Gap + Texto)
-    const blockH_pct = codeH_pct + gap_pct + textH_pct;
-    
-    // Margem superior para centralizar o bloco inteiro no meio do cartão
-    const topMargin_pct = (100 - blockH_pct) / 2;
-    
-    setSettings(prev => ({
-      ...prev,
-      qrX: 50,
-      textX: 50,
-      qrY: topMargin_pct + (codeH_pct / 2),
-      textY: topMargin_pct + codeH_pct + gap_pct + (textH_pct / 2)
-    }));
+    if (codeType === 'both') {
+      const qrH_in_cm = (settings.qrSize / 100) * cardW;
+      const qrH_pct = (qrH_in_cm / cardH) * 100;
+
+      const barW_in_cm = ((settings.barcodeWidth || settings.qrSize) / 100) * cardW;
+      const barH_in_cm = barW_in_cm * ((settings.barcodeHeight || 40) / 100);
+      const barH_pct = (barH_in_cm / cardH) * 100;
+
+      const textH_pct = settings.fontSize;
+      const gap_pct = 5;
+
+      const totalH_pct = qrH_pct + barH_pct + textH_pct + (gap_pct * 2);
+      const startY = (100 - totalH_pct) / 2;
+
+      setSettings(prev => ({
+        ...prev,
+        qrX: 50,
+        qrY: startY + (qrH_pct / 2),
+        barcodeX: 50,
+        barcodeY: startY + qrH_pct + gap_pct + (barH_pct / 2),
+        textX: 50,
+        textY: startY + qrH_pct + gap_pct + barH_pct + gap_pct + (textH_pct / 2)
+      }));
+    } else if (codeType === 'qr') {
+      const codeH_in_cm = (settings.qrSize / 100 * cardW);
+      const codeH_pct = (codeH_in_cm / cardH) * 100;
+      const textH_pct = settings.fontSize;
+      const gap_pct = 8;
+      const blockH_pct = codeH_pct + gap_pct + textH_pct;
+      const topMargin_pct = (100 - blockH_pct) / 2;
+
+      setSettings(prev => ({
+        ...prev,
+        qrX: 50,
+        textX: 50,
+        qrY: topMargin_pct + (codeH_pct / 2),
+        textY: topMargin_pct + codeH_pct + gap_pct + (textH_pct / 2)
+      }));
+    } else {
+      const barW_in_cm = ((settings.barcodeWidth || settings.qrSize) / 100 * cardW);
+      const codeH_in_cm = barW_in_cm * ((settings.barcodeHeight || 40) / 100);
+      const codeH_pct = (codeH_in_cm / cardH) * 100;
+      const textH_pct = settings.fontSize;
+      const gap_pct = 8;
+      const blockH_pct = codeH_pct + gap_pct + textH_pct;
+      const topMargin_pct = (100 - blockH_pct) / 2;
+
+      setSettings(prev => ({
+        ...prev,
+        barcodeX: 50,
+        textX: 50,
+        barcodeY: topMargin_pct + (codeH_pct / 2),
+        qrX: 50,
+        qrY: topMargin_pct + (codeH_pct / 2),
+        textY: topMargin_pct + codeH_pct + gap_pct + (textH_pct / 2)
+      }));
+    }
+  };
+
+  const handleAutoCenterVerso = () => {
+    const cardW = pageWidth;
+    const cardH = pageHeight;
+
+    if (versoCodeType === 'both') {
+      const qrH_in_cm = (settings.versoQrSize / 100) * cardW;
+      const qrH_pct = (qrH_in_cm / cardH) * 100;
+
+      const barW_in_cm = ((settings.versoBarcodeWidth || settings.versoQrSize) / 100) * cardW;
+      const barH_in_cm = barW_in_cm * ((settings.versoBarcodeHeight || 40) / 100);
+      const barH_pct = (barH_in_cm / cardH) * 100;
+
+      const textH_pct = settings.versoFontSize > 0 ? settings.versoFontSize : 0;
+      const gap_pct = 5;
+
+      const totalH_pct = qrH_pct + barH_pct + textH_pct + (textH_pct > 0 ? gap_pct * 2 : gap_pct);
+      const startY = (100 - totalH_pct) / 2;
+
+      setSettings(prev => ({
+        ...prev,
+        versoQrX: 50,
+        versoQrY: startY + (qrH_pct / 2),
+        versoBarcodeX: 50,
+        versoBarcodeY: startY + qrH_pct + gap_pct + (barH_pct / 2),
+        versoTextX: 50,
+        versoTextY: startY + qrH_pct + gap_pct + barH_pct + gap_pct + (textH_pct / 2)
+      }));
+    } else if (versoCodeType === 'qr') {
+      const codeH_in_cm = (settings.versoQrSize / 100 * cardW);
+      const codeH_pct = (codeH_in_cm / cardH) * 100;
+      const textH_pct = settings.versoFontSize > 0 ? settings.versoFontSize : 0;
+      const gap_pct = 8;
+      const blockH_pct = codeH_pct + (textH_pct > 0 ? gap_pct + textH_pct : 0);
+      const topMargin_pct = (100 - blockH_pct) / 2;
+
+      setSettings(prev => ({
+        ...prev,
+        versoQrX: 50,
+        versoTextX: 50,
+        versoQrY: topMargin_pct + (codeH_pct / 2),
+        versoTextY: topMargin_pct + codeH_pct + gap_pct + (textH_pct / 2)
+      }));
+    } else if (versoCodeType === 'barcode') {
+      const barW_in_cm = ((settings.versoBarcodeWidth || settings.versoQrSize) / 100 * cardW);
+      const codeH_in_cm = barW_in_cm * ((settings.versoBarcodeHeight || 40) / 100);
+      const codeH_pct = (codeH_in_cm / cardH) * 100;
+      const textH_pct = settings.versoFontSize > 0 ? settings.versoFontSize : 0;
+      const gap_pct = 8;
+      const blockH_pct = codeH_pct + (textH_pct > 0 ? gap_pct + textH_pct : 0);
+      const topMargin_pct = (100 - blockH_pct) / 2;
+
+      setSettings(prev => ({
+        ...prev,
+        versoBarcodeX: 50,
+        versoTextX: 50,
+        versoBarcodeY: topMargin_pct + (codeH_pct / 2),
+        versoQrX: 50,
+        versoQrY: topMargin_pct + (codeH_pct / 2),
+        versoTextY: topMargin_pct + codeH_pct + gap_pct + (textH_pct / 2)
+      }));
+    }
   };
 
   return (
@@ -814,22 +932,32 @@ export default function Comandas({ minimal = false }) {
                 <div className="space-y-8 animate-fade-in">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-dark-300 uppercase tracking-widest">B. Posicionamento de Elementos do Verso (%)</h3>
+                    {versoCodeType !== 'none' && (
+                      <button 
+                        onClick={handleAutoCenterVerso}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg text-xs font-bold transition-all border border-brand-500/20"
+                      >
+                        <HiOutlineRefresh className="w-3.5 h-3.5" />
+                        Auto-Centralizar Verso
+                      </button>
+                    )}
                   </div>
 
                   {/* Verso Code Type Selection */}
                   <div className="space-y-4">
                     <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Tipo de Código no Verso</span>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { id: 'none', label: 'Nenhum' },
                         { id: 'qr', label: 'QR Code' },
-                        { id: 'barcode', label: 'Cód. Barras' }
+                        { id: 'barcode', label: 'Cód. Barras' },
+                        { id: 'both', label: 'Ambos (QR + Barras)' }
                       ].map(opt => (
                         <button
                           key={opt.id}
                           onClick={() => setVersoCodeType(opt.id)}
                           type="button"
-                          className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${versoCodeType === opt.id ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                          className={`py-3 px-3 text-xs font-bold rounded-xl border transition-all ${versoCodeType === opt.id ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
                         >
                           {opt.label}
                         </button>
@@ -841,56 +969,87 @@ export default function Comandas({ minimal = false }) {
                     {/* Verso Code Sizing & Positioning */}
                     {versoCodeType !== 'none' ? (
                       <div className="space-y-6">
-                        <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Posicionamento do Código (Verso)</h4>
-                        
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">
-                              {versoCodeType === 'barcode' ? 'Largura do Cód. Barras' : 'Tamanho do QR'}
-                            </span>
-                            <span className="text-brand-400">{settings.versoQrSize}%</span>
-                          </div>
-                          <input type="range" min="10" max="100" value={settings.versoQrSize} onChange={(e) => handleSettingChange('versoQrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
-                        </div>
-
-                        {versoCodeType === 'barcode' && (
-                          <div className="space-y-3 animate-fade-in">
-                            <div className="flex justify-between text-xs font-bold">
-                              <span className="text-dark-200">Largura Vertical do Cód. Barras</span>
-                              <span className="text-brand-400">{settings.versoBarcodeHeight}%</span>
+                        {(versoCodeType === 'qr' || versoCodeType === 'both') && (
+                          <div className="space-y-4 border-b border-dark-600/30 pb-6">
+                            <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">QR Code (Verso)</h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Tamanho do QR</span>
+                                <span className="text-brand-400">{settings.versoQrSize}%</span>
+                              </div>
+                              <input type="range" min="10" max="100" value={settings.versoQrSize} onChange={(e) => handleSettingChange('versoQrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
                             </div>
-                            <input 
-                              type="range" 
-                              min="10" 
-                              max="100" 
-                              value={settings.versoBarcodeHeight} 
-                              onChange={(e) => handleSettingChange('versoBarcodeHeight', e.target.value)} 
-                              className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" 
-                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Horizontal (X)</span>
+                                  <span>{settings.versoQrX}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.versoQrX} onChange={(e) => handleSettingChange('versoQrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Vertical (Y)</span>
+                                  <span>{settings.versoQrY}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.versoQrY} onChange={(e) => handleSettingChange('versoQrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                            </div>
                           </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                              <span>Horizontal (X)</span>
-                              <span>{settings.versoQrX}%</span>
+                        {(versoCodeType === 'barcode' || versoCodeType === 'both') && (
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Cód. Barras (Verso)</h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Largura do Cód. Barras</span>
+                                <span className="text-brand-400">{settings.versoBarcodeWidth}%</span>
+                              </div>
+                              <input type="range" min="10" max="100" value={settings.versoBarcodeWidth} onChange={(e) => handleSettingChange('versoBarcodeWidth', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
                             </div>
-                            <input type="range" min="0" max="100" value={settings.versoQrX} onChange={(e) => handleSettingChange('versoQrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                          </div>
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                              <span>Vertical (Y)</span>
-                              <span>{settings.versoQrY}%</span>
+
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Altura Vertical do Cód. Barras</span>
+                                <span className="text-brand-400">{settings.versoBarcodeHeight}%</span>
+                              </div>
+                              <input 
+                                type="range" 
+                                min="10" 
+                                max="100" 
+                                value={settings.versoBarcodeHeight} 
+                                onChange={(e) => handleSettingChange('versoBarcodeHeight', e.target.value)} 
+                                className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" 
+                              />
                             </div>
-                            <input type="range" min="0" max="100" value={settings.versoQrY} onChange={(e) => handleSettingChange('versoQrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Horizontal (X)</span>
+                                  <span>{settings.versoBarcodeX}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.versoBarcodeX} onChange={(e) => handleSettingChange('versoBarcodeX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Vertical (Y)</span>
+                                  <span>{settings.versoBarcodeY}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.versoBarcodeY} onChange={(e) => handleSettingChange('versoBarcodeY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     ) : (
                       <div className="bg-dark-900/30 border border-dark-600/30 rounded-2xl p-6 flex flex-col items-center justify-center text-center text-dark-400">
                         <p className="text-xs font-bold">Sem código no verso</p>
-                        <p className="text-[10px] text-dark-500 mt-1">Selecione "QR Code" ou "Cód. Barras" acima para configurar e posicionar um código dinâmico no verso.</p>
+                        <p className="text-[10px] text-dark-500 mt-1">Selecione "QR Code", "Cód. Barras" ou "Ambos" acima para configurar e posicionar os códigos dinâmicos no verso.</p>
                       </div>
                     )}
 
@@ -1008,53 +1167,84 @@ export default function Comandas({ minimal = false }) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                      {/* QR Code Group */}
+                      {/* Frente Code Group */}
                       <div className="space-y-6">
-                        <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Código Principal</h4>
-                        
-                        <div className="space-y-3">
-                          <div className="flex justify-between text-xs font-bold">
-                            <span className="text-dark-200">
-                              {codeType === 'barcode' ? 'Largura do Cód. Barras' : 'Tamanho do QR'}
-                            </span>
-                            <span className="text-brand-400">{settings.qrSize}%</span>
-                          </div>
-                          <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
-                        </div>
-
-                        {codeType === 'barcode' && (
-                          <div className="space-y-3 animate-fade-in">
-                            <div className="flex justify-between text-xs font-bold">
-                              <span className="text-dark-200">Largura Vertical do Cód. Barras</span>
-                              <span className="text-brand-400">{settings.barcodeHeight}%</span>
+                        {(codeType === 'qr' || codeType === 'both') && (
+                          <div className="space-y-4 border-b border-dark-600/30 pb-6">
+                            <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">QR Code (Frente)</h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Tamanho do QR</span>
+                                <span className="text-brand-400">{settings.qrSize}%</span>
+                              </div>
+                              <input type="range" min="10" max="100" value={settings.qrSize} onChange={(e) => handleSettingChange('qrSize', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
                             </div>
-                            <input 
-                              type="range" 
-                              min="10" 
-                              max="100" 
-                              value={settings.barcodeHeight} 
-                              onChange={(e) => handleSettingChange('barcodeHeight', e.target.value)} 
-                              className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" 
-                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Horizontal (X)</span>
+                                  <span>{settings.qrX}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Vertical (Y)</span>
+                                  <span>{settings.qrY}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                            </div>
                           </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                              <span>Horizontal (X)</span>
-                              <span>{settings.qrX}%</span>
+                        {(codeType === 'barcode' || codeType === 'both') && (
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Cód. Barras (Frente)</h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Largura do Cód. Barras</span>
+                                <span className="text-brand-400">{settings.barcodeWidth}%</span>
+                              </div>
+                              <input type="range" min="10" max="100" value={settings.barcodeWidth} onChange={(e) => handleSettingChange('barcodeWidth', e.target.value)} className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" />
                             </div>
-                            <input type="range" min="0" max="100" value={settings.qrX} onChange={(e) => handleSettingChange('qrX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
-                          </div>
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-[10px] font-bold text-dark-400">
-                              <span>Vertical (Y)</span>
-                              <span>{settings.qrY}%</span>
+
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-xs font-bold">
+                                <span className="text-dark-200">Altura Vertical do Cód. Barras</span>
+                                <span className="text-brand-400">{settings.barcodeHeight}%</span>
+                              </div>
+                              <input 
+                                type="range" 
+                                min="10" 
+                                max="100" 
+                                value={settings.barcodeHeight} 
+                                onChange={(e) => handleSettingChange('barcodeHeight', e.target.value)} 
+                                className="w-full accent-brand-500 h-1.5 bg-dark-700 rounded-lg" 
+                              />
                             </div>
-                            <input type="range" min="0" max="100" value={settings.qrY} onChange={(e) => handleSettingChange('qrY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Horizontal (X)</span>
+                                  <span>{settings.barcodeX}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.barcodeX} onChange={(e) => handleSettingChange('barcodeX', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                              <div className="space-y-3">
+                                <div className="flex justify-between text-[10px] font-bold text-dark-400">
+                                  <span>Vertical (Y)</span>
+                                  <span>{settings.barcodeY}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value={settings.barcodeY} onChange={(e) => handleSettingChange('barcodeY', e.target.value)} className="w-full accent-brand-500 h-1 bg-dark-700 rounded-lg" />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       {/* Text Group */}
@@ -1252,19 +1442,25 @@ export default function Comandas({ minimal = false }) {
 
                 {/* Code Format */}
                 <div className="space-y-4">
-                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Tipo de Escaneável</span>
-                  <div className="grid grid-cols-2 gap-3">
+                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest leading-none">Tipo de Escaneável (Frente)</span>
+                  <div className="grid grid-cols-3 gap-2">
                     <button 
                       onClick={() => setCodeType('qr')}
-                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${codeType === 'qr' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                      className={`py-3 px-2 text-xs font-bold rounded-xl border transition-all ${codeType === 'qr' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
                     >
                       QR Code
                     </button>
                     <button 
                       onClick={() => setCodeType('barcode')}
-                      className={`py-3 px-4 text-xs font-bold rounded-xl border transition-all ${codeType === 'barcode' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                      className={`py-3 px-2 text-xs font-bold rounded-xl border transition-all ${codeType === 'barcode' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
                     >
                       Cód. Barras
+                    </button>
+                    <button 
+                      onClick={() => setCodeType('both')}
+                      className={`py-3 px-2 text-xs font-bold rounded-xl border transition-all ${codeType === 'both' ? 'bg-brand-500 text-white border-brand-400 glow-brand' : 'bg-dark-900/50 text-dark-400 border-dark-600/50 hover:border-dark-500'}`}
+                    >
+                      Ambos
                     </button>
                   </div>
                 </div>
